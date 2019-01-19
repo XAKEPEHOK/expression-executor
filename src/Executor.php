@@ -7,6 +7,7 @@
 namespace XAKEPEHOK\ExpressionExecutor;
 
 
+use XAKEPEHOK\ExpressionExecutor\Exceptions\ExecutorException;
 use XAKEPEHOK\ExpressionExecutor\Exceptions\SyntaxException;
 
 class Executor
@@ -28,11 +29,35 @@ class Executor
     /** @var array */
     private $memory = [];
 
+    /**
+     * Executor constructor.
+     * @param FunctionInterface[]|callable[] $functions
+     * @param OperatorInterface[] $operators
+     * @param array $variables
+     * @throws ExecutorException
+     */
     public function __construct(array $functions, array $operators, array $variables = [])
     {
+        foreach ($functions as $name => $function) {
+            if ($function instanceof FunctionInterface) {
+                $name = $function->getName();
+            }
+
+            if (!preg_match('~^[a-z\d_]+$~i', $name)) {
+                throw new ExecutorException("Invalid function name «{$name}»: name should be match [a-z\d_]+");
+            }
+
+        }
         $this->functions = $functions;
 
+        foreach ($operators as $operator) {
+            if (preg_match('~["\(\)]~', $operator->operator())) {
+                throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain brackets and double-quotes");
+            }
+        }
         $this->operators = $operators;
+
+
         usort($this->operators, function (OperatorInterface $operator_1, OperatorInterface $operator_2) {
             if ($operator_1->priority() == $operator_2->priority()) {
                 return 0;
