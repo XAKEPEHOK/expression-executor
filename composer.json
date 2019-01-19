@@ -1,0 +1,34 @@
+{
+    "name": "xakepehok/expression-executor",
+    "type": "library",
+    "description": "Expression executor, which allow to implement domain-specific language",
+	"keywords": [
+        "DSL",
+		"Expression",
+		"Executor"
+    ],
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "XAKEPEHOK",
+            "email": "icq-475204@ya.ru"
+        }
+    ],
+    "require": {
+        "php": ">=7.1",
+        "ext-mbstring": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "XAKEPEHOK\\ExpressionExecutor\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "XAKEPEHOK\\ExpressionExecutor\\": "tests/"
+        }
+    }
+}
