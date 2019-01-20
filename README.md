@@ -2,18 +2,25 @@
 
 Expression executor, which allows to implement domain-specific language. This lib doesn’t contain any
 implemented operators or functions. Its only a framework, which allows you to build your own domain-specific 
-language for expressions, with any functions, operators and typing system
+language for expressions, with any functions, operators and typing system.
 
 You can define your own operator, functions and variables. For example, you want to calc/execute expressions
 like: 
 ```
 MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") * {{VARIABLE}} + ("2" + "2") * "2"
 ``` 
-In this example above
+In example above
 - `MIN` and `NUMBER_OF_DAY` - functions
 - `{{VARIABLE}}` - variable
 - `+` and `*` - operators
 -  `"5"`, `"10"`, `"2019"`, ... (any number or strings in double-quotes) - arguments 
+
+### Installation:
+```bash
+composer require xakepehok/expression-executor
+```
+
+### Usage
 
 In order to calc/execute expressions above you need to define those functions, operators and values
 
