@@ -33,10 +33,10 @@ class Executor
      * Executor constructor.
      * @param FunctionInterface[]|callable[] $functions
      * @param OperatorInterface[] $operators
-     * @param array $variables
+     * @param array|callable $variables
      * @throws ExecutorException
      */
-    public function __construct(array $functions, array $operators, array $variables = [])
+    public function __construct(array $functions, array $operators, $variables = null)
     {
         foreach ($functions as $function) {
             if (!($function instanceof FunctionInterface)) {
@@ -69,12 +69,15 @@ class Executor
         });
 
 
-        foreach ($variables as $name => $value) {
-            if (!preg_match('~^[a-z\d_\.]+$~i', $name)) {
-                throw new ExecutorException("Invalid variable name «{$name}»: name should be match [a-z\d_\.]+", 3);
+
+        if (is_array($variables)) {
+            foreach ($variables as $name => $value) {
+                if (!preg_match('~^[a-z\d_\.]+$~i', $name)) {
+                    throw new ExecutorException("Invalid variable name «{$name}»: name should be match [a-z\d_\.]+", 3);
+                }
             }
         }
-        $this->variables = $variables;
+        $this->variables = $variables ?? [];
     }
 
     /**
@@ -122,7 +125,12 @@ class Executor
         $matches = [];
         while (preg_match('~\{\{([^\}]+)\}\}~', $expression, $matches)) {
 
-            $value = $this->variables[$matches[1]];
+            if (is_callable($this->variables)) {
+                $value = ($this->variables)($matches[1]);
+            } else {
+                $value = $this->variables[$matches[1]];
+            }
+
             if (is_callable($value)) {
                 $value = $value($matches[1]);
             }

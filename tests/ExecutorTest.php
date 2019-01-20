@@ -309,6 +309,16 @@ class ExecutorTest extends TestCase
         new Executor($this->functions, $this->operators, $variables);
     }
 
+    public function testConstructCallableVariables()
+    {
+        $executor = new Executor($this->functions, $this->operators, function ($variable) {
+            return $variable;
+        });
+
+        $this->assertEquals($executor->execute('{{hello}}'), 'hello');
+        $this->assertEquals($executor->execute('{{hello.world}}'), 'hello.world');
+    }
+
     public function validExpressionProvider(): array
     {
         return [

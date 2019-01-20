@@ -136,6 +136,7 @@ in your classes (functions and operators)
 - Functions arguments can be named `NUMBER_OF_DAY(year: "2019", month: "01", day: "20")` and unnamed
 NUMBER_OF_DAY("2019", "01", "20"), but not combined
 - Function arguments can be arguments, variables, another functions result and any expressions
+- You can use callable instead of variables array
 - Use brackets `("2" + "2") * "2"` for priority
 
 See [ExecutorTest.php](tests/ExecutorTest.php) for more examples.
