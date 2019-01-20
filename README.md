@@ -1,10 +1,10 @@
 # ExpressionExecutor [![Build Status](https://travis-ci.com/XAKEPEHOK/expression-executor.svg?branch=master)](https://travis-ci.com/XAKEPEHOK/expression-executor)
 
-Expression executor, which allow to implement domain-specific language. This lib not contain any
-implemented operators or functions. Its only a framework, which allow you build your own domain-specific 
+Expression executor, which allows to implement domain-specific language. This lib doesn’t contain any
+implemented operators or functions. It’s only a framework, which allows you to build your own domain-specific 
 language for expressions, with any functions, operators and typing system
 
-You can define your own operator, functions and variables. For example, you want calc/execute expressions
+You can define your own operator, functions and variables. For example, you want to calc/execute expressions
 like: 
 ```
 MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") * {{VARIABLE}} + ("2" + "2") * "2"
@@ -15,7 +15,7 @@ In this example above
 - `+` and `*` - operators
 -  `"5"`, `"10"`, `"2019"`, ... (any number or strings in double-quotes) - arguments 
 
-For calc/execute expressions above you need define those functions, operators and values
+In order to calc/execute expressions above you need to define those functions, operators and values
 
 MIN():
 ```php
@@ -135,7 +135,7 @@ in your classes (functions and operators)
 - Functions accept any count of arguments (you can limit in function body by exceptions)
 - Functions arguments can be named `NUMBER_OF_DAY(year: "2019", month: "01", day: "20")` and unnamed
 NUMBER_OF_DAY("2019", "01", "20"), but not combined
-- Function arguments can be arguments, variables, another functions result and any expressions
+- Function arguments can be arguments, variables, other functions result and any expressions
 - You can use callable instead of variables array
 - Use brackets `("2" + "2") * "2"` for priority
 
@@ -143,8 +143,9 @@ See [ExecutorTest.php](tests/ExecutorTest.php) for more examples.
 
 ### Differences from analogues
 - https://symfony.com/doc/current/components/expression_language.html - great symfony component for
-expressions, but there impossible to override logic of any built-in operators and also impossible use
+expressions, but it is impossible to override logic of any built-in operators and also impossible use
 your own strict type system. Only one way to extend - define your own function
 - https://github.com/NeonXP/MathExecutor - good math expressions calculator with user-defined operators
-and functions, but also impossible use your own strict type system. For example, you can't do something 
+and functions, but it is also impossible to use your own strict type system. For example, you can't do something 
 like Datetime - Datetime (with type saving)
+
