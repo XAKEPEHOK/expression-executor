@@ -7,6 +7,8 @@
 namespace XAKEPEHOK\ExpressionExecutor;
 
 
+use XAKEPEHOK\ExpressionExecutor\Exceptions\OperatorException;
+
 interface OperatorInterface
 {
 
@@ -18,6 +20,12 @@ interface OperatorInterface
      */
     public function priority(): int;
 
+    /**
+     * @param $leftOperand
+     * @param $rightOperand
+     * @return mixed
+     * Use @see OperatorException if needed
+     */
     public function execute($leftOperand, $rightOperand);
 
 }
