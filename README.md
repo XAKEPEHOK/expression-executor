@@ -1,4 +1,4 @@
-# ExpressionExecutor
+# ExpressionExecutor [![Build Status](https://travis-ci.com/XAKEPEHOK/expression-executor.svg?branch=master)](https://travis-ci.com/XAKEPEHOK/expression-executor)
 
 Expression executor, which allow to implement domain-specific language. This lib not contain any
 implemented operators or functions. Its only a framework, which allow you build your own domain-specific 
