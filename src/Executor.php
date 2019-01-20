@@ -54,9 +54,10 @@ class Executor
                 throw new ExecutorException('Operator should be instance of ' . OperatorInterface::class, 2);
             }
 
-            if (preg_match('~["\(\)]~', $operator->operator())) {
-                throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain brackets and double-quotes", 22);
+            if (preg_match('~["\(\),]~', $operator->operator())) {
+                throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain commas, brackets and double-quotes", 22);
             }
+
         }
         $this->operators = $operators;
 

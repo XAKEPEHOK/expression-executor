@@ -130,7 +130,7 @@ $result = $executor->execute('MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month
 
 ### Features
 - Its safe. No `eval()`
-- Executor can work with any types of data. All types checking and manipulating should be implemented
+- Executor can return and work with any types of data. All types checking and manipulating should be implemented
 in your classes (functions and operators)
 - Arguments support escaped double quotes, for example `"My name is \"Timur\""`
 - Functions accept any count of arguments (you can limit in function body by exceptions)
@@ -139,6 +139,7 @@ NUMBER_OF_DAY("2019", "01", "20"), but not combined
 - Function arguments can be arguments, variables, other functions result and any expressions
 - You can use callable instead of variables array
 - Use brackets `("2" + "2") * "2"` for priority
+- You can implement any operator, such as `>`, `>=`, `<`, `<=` and any what you want and desire
 
 See [ExecutorTest.php](tests/ExecutorTest.php) for more examples.
 

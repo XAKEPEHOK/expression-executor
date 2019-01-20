@@ -40,6 +40,9 @@ class ExecutorTest extends TestCase
     /** @var OperatorInterface */
     private $operator_divide;
 
+    /** @var OperatorInterface */
+    private $operator_divide_alt;
+
     /** @var OperatorInterface[] */
     private $operators;
 
@@ -184,11 +187,33 @@ class ExecutorTest extends TestCase
                 return $leftOperand / $rightOperand;
             }
         };
+        $this->operator_divide_alt = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return ':';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 2;
+            }
+
+            public function execute($leftOperand, $rightOperand)
+            {
+                return $leftOperand / $rightOperand;
+            }
+        };
         $this->operators = [
             $this->operator_plus,
             $this->operator_minus,
             $this->operator_multiply,
             $this->operator_divide,
+            $this->operator_divide_alt,
         ];
 
         $this->vars = [
@@ -244,6 +269,7 @@ class ExecutorTest extends TestCase
             ['('],
             [')'],
             ['"'],
+            [','],
         ];
     }
 
@@ -354,6 +380,7 @@ class ExecutorTest extends TestCase
                 'MIN(MAX(MIN("1", "2"), "3"), MIN(MAX("5", {{TEN}}), "2"))',
                 min(max(min("1", "2"), "3"), min(max("5", $this->vars['TEN']), "2"))
             ],
+            ['MIN(value_1: "8" : "2", value_2: "5") : "2"', min(["8" / "2", "5"]) / "2"],
 
             ['"2" + "3"', 5],
             ['"2" + "3" * "2"', 8],
