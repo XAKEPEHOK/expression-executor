@@ -38,21 +38,24 @@ class Executor
      */
     public function __construct(array $functions, array $operators, array $variables = [])
     {
-        foreach ($functions as $name => $function) {
-            if ($function instanceof FunctionInterface) {
-                $name = $function->getName();
+        foreach ($functions as $function) {
+            if (!($function instanceof FunctionInterface)) {
+                throw new ExecutorException('Function should be instance of ' . FunctionInterface::class, 1);
             }
 
-            if (!preg_match('~^[a-z\d_]+$~i', $name)) {
-                throw new ExecutorException("Invalid function name «{$name}»: name should be match [a-z\d_]+");
+            if (!preg_match('~^[a-z\d_]+$~i', $function->getName())) {
+                throw new ExecutorException("Invalid function name «{$function->getName()}»: name should be match [a-z\d_]+", 11);
             }
-
         }
         $this->functions = $functions;
 
         foreach ($operators as $operator) {
+            if (!($operator instanceof OperatorInterface)) {
+                throw new ExecutorException('Operator should be instance of ' . OperatorInterface::class, 2);
+            }
+
             if (preg_match('~["\(\)]~', $operator->operator())) {
-                throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain brackets and double-quotes");
+                throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain brackets and double-quotes", 22);
             }
         }
         $this->operators = $operators;
@@ -65,6 +68,12 @@ class Executor
             return ($operator_1->priority() < $operator_2->priority()) ? 1 : -1;
         });
 
+
+        foreach ($variables as $name => $value) {
+            if (!preg_match('~^[a-z\d_\.]+$~i', $name)) {
+                throw new ExecutorException("Invalid variable name «{$name}»: name should be match [a-z\d_\.]+", 3);
+            }
+        }
         $this->variables = $variables;
     }
 
@@ -83,11 +92,11 @@ class Executor
 
         if (preg_match('~^`[a-f\d]{32}`$~', $expression)) {
             $result = $this->recall($expression);
-            $this->memory = [];;
+            $this->memory = [];
             return $result;
         }
 
-        throw new SyntaxException('Syntax exception');
+        throw new SyntaxException('Unexpected execution exception');
     }
 
     /**
@@ -148,10 +157,8 @@ class Executor
 
     private function calcFunctions(string $expression): string
     {
-        foreach ($this->functions as $name => $function) {
-            if ($function instanceof FunctionInterface) {
-                $name = $function->getName();
-            }
+        foreach ($this->functions as $function) {
+            $name = $function->getName();
 
             $exactlyFunctionName = '(?<![a-z\d_])' . preg_quote($name);
             $arrayArguments = '\(((?:`[a-f\d]{32}`){1}(?:,`[a-f\d]{32}`)*)\)';
@@ -181,11 +188,7 @@ class Executor
                     );
                 }
 
-                if ($function instanceof FunctionInterface) {
-                    $value = $function->execute($arguments);
-                } else {
-                    $value = $function($arguments);
-                }
+                $value = $function->execute($arguments);
 
                 $expr = $matches[0];
                 $expression = str_replace($expr, $this->remember($expr, $value), $expression);
