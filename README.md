@@ -1,7 +1,7 @@
 # ExpressionExecutor [![Build Status](https://travis-ci.com/XAKEPEHOK/expression-executor.svg?branch=master)](https://travis-ci.com/XAKEPEHOK/expression-executor)
 
 Expression executor, which allows to implement domain-specific language. This lib doesn’t contain any
-implemented operators or functions. It’s only a framework, which allows you to build your own domain-specific 
+implemented operators or functions. Its only a framework, which allows you to build your own domain-specific 
 language for expressions, with any functions, operators and typing system
 
 You can define your own operator, functions and variables. For example, you want to calc/execute expressions
@@ -129,6 +129,7 @@ $result = $executor->execute('MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month
 ```
 
 ### Features
+- Its safe. No `eval()`
 - Executor can work with any types of data. All types checking and manipulating should be implemented
 in your classes (functions and operators)
 - Arguments support escaped double quotes, for example `"My name is \"Timur\""`
