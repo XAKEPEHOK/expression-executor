@@ -7,15 +7,15 @@ language for expressions, with any functions, operators and typing system.
 You can define your own operator, functions and variables. For example, you want to calc/execute expressions
 like: 
 ```
-MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2
+MIN(5, 10.5) + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2
 ``` 
 In example above
 - `MIN` and `NUMBER_OF_DAY` - functions
 - `{{VARIABLE}}` - variable
 - `PI` - syntax user-defined constant (for example, you can define TRUE, FALSE and NULL constants)
 - `+` and `*` - operators
--  `"5"`, `"10"`, `"2019"` - any strings in double-quotes - string arguments
--  `(-2)`, `2.5`, `2` - any number int and float arguments respectively
+-  `"5"`, `"10"`, `"2019"` - strings in double-quotes
+-  `5`, `10.5`, (-2)`, `2.5`, `2` - int/float as is, but negative values should be wrapped in brackets
 
 ### Installation:
 ```bash
@@ -135,7 +135,7 @@ $executor = new \XAKEPEHOK\ExpressionExecutor\Executor(
 );
 
 //And simply execute our expression 
-$result = $executor->execute('MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2');
+$result = $executor->execute('MIN(5, 10.5) + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2');
 ```
 
 ### Features
