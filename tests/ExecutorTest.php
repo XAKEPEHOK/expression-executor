@@ -25,6 +25,9 @@ class ExecutorTest extends TestCase
     /** @var FunctionInterface */
     private $func_length;
 
+    /** @var FunctionInterface */
+    private $func_context;
+
     /** @var FunctionInterface[] */
     private $functions;
 
@@ -42,6 +45,9 @@ class ExecutorTest extends TestCase
 
     /** @var OperatorInterface */
     private $operator_divide_alt;
+
+    /** @var OperatorInterface */
+    private $operator_context;
 
     /** @var OperatorInterface[] */
     private $operators;
@@ -68,7 +74,7 @@ class ExecutorTest extends TestCase
                 return 'MIN';
             }
 
-            public function execute(array $arguments)
+            public function execute(array $arguments, array $context)
             {
                 return min($arguments);
             }
@@ -80,7 +86,7 @@ class ExecutorTest extends TestCase
                 return 'MAX';
             }
 
-            public function execute(array $arguments)
+            public function execute(array $arguments, array $context)
             {
                 return max($arguments);
             }
@@ -92,7 +98,7 @@ class ExecutorTest extends TestCase
                 return 'LENGTH';
             }
 
-            public function execute(array $arguments)
+            public function execute(array $arguments, array $context)
             {
                 if (isset($arguments['string'])) {
                     return mb_strlen($arguments['string']);
@@ -100,10 +106,23 @@ class ExecutorTest extends TestCase
                 return mb_strlen($arguments[0]);
             }
         };
+        $this->func_context = new class implements FunctionInterface {
+
+            public function getName(): string
+            {
+                return 'CONTEXT';
+            }
+
+            public function execute(array $arguments, array $context)
+            {
+                return $context[$arguments[0]];
+            }
+        };
         $this->functions = [
             $this->func_min,
             $this->func_max,
-            $this->func_length
+            $this->func_length,
+            $this->func_context,
         ];
 
         $this->operator_plus = new class implements OperatorInterface {
@@ -122,7 +141,7 @@ class ExecutorTest extends TestCase
                 return 1;
             }
 
-            public function execute($leftOperand, $rightOperand)
+            public function execute($leftOperand, $rightOperand, array $context)
             {
                 return $leftOperand + $rightOperand;
             }
@@ -143,7 +162,7 @@ class ExecutorTest extends TestCase
                 return 1;
             }
 
-            public function execute($leftOperand, $rightOperand)
+            public function execute($leftOperand, $rightOperand, array $context)
             {
                 return $leftOperand - $rightOperand;
             }
@@ -164,7 +183,7 @@ class ExecutorTest extends TestCase
                 return 2;
             }
 
-            public function execute($leftOperand, $rightOperand)
+            public function execute($leftOperand, $rightOperand, array $context)
             {
                 return $leftOperand * $rightOperand;
             }
@@ -185,7 +204,7 @@ class ExecutorTest extends TestCase
                 return 2;
             }
 
-            public function execute($leftOperand, $rightOperand)
+            public function execute($leftOperand, $rightOperand, array $context)
             {
                 return $leftOperand / $rightOperand;
             }
@@ -206,9 +225,30 @@ class ExecutorTest extends TestCase
                 return 2;
             }
 
-            public function execute($leftOperand, $rightOperand)
+            public function execute($leftOperand, $rightOperand, array $context)
             {
                 return $leftOperand / $rightOperand;
+            }
+        };
+        $this->operator_context = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return '#';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 2;
+            }
+
+            public function execute($leftOperand, $rightOperand, array $context)
+            {
+                return $context[$leftOperand][$rightOperand];
             }
         };
         $this->operators = [
@@ -217,6 +257,7 @@ class ExecutorTest extends TestCase
             $this->operator_multiply,
             $this->operator_divide,
             $this->operator_divide_alt,
+            $this->operator_context,
         ];
 
         $this->vars = function ($name, array $context = []) {
@@ -224,9 +265,9 @@ class ExecutorTest extends TestCase
                 'TEN' => 10,
                 'FIVE' => 5,
                 'STRING' => 'Awesome!',
-                'CONTEXT.VALUE' => $context['value']
+                'CONTEXT.VALUE' => $context['VALUE']
             ];
-            return $this->$vars[$name];
+            return $vars[$name];
         };
 
         $this->constants = [
@@ -261,7 +302,7 @@ class ExecutorTest extends TestCase
                     return 'MIN+';
                 }
 
-                public function execute(array $arguments)
+                public function execute(array $arguments, array $context)
                 {
                     return min($arguments);
                 }
@@ -320,7 +361,7 @@ class ExecutorTest extends TestCase
                     return 1;
                 }
 
-                public function execute($leftOperand, $rightOperand)
+                public function execute($leftOperand, $rightOperand, array $context)
                 {
                     return true;
                 }
@@ -419,7 +460,11 @@ class ExecutorTest extends TestCase
                 (($this->vars)('TEN') + 3.3) * MAX([2 + 3, mb_strlen(($this->vars)('STRING'))])
             ],
 
-            ['5 + {{CONTEXT.VALUE}}', 5, ['value' => 10]],
+            ['5 + {{CONTEXT.VALUE}}', 15, ['VALUE' => 10]],
+            ['CONTEXT("value")', 10, ['value' => 10]],
+            ['"first" # "second"', "success", ['first' => [
+                'second' => "success",
+            ]]],
         ];
     }
 

@@ -98,18 +98,17 @@ class Executor
      */
     public function execute(string $expression, array $context = [])
     {
+        $this->memory = [];
         $this->guardToken($expression);
         $expression = $this->prepareStrings($expression);
         $expression = $this->prepareVariables($expression, $context);
         $expression = $this->prepareConstants($expression);
         $expression = $this->prepareNumbers($expression);
         $expression = preg_replace('/\s+/u', '', $expression);
-        $expression = $this->calculate($expression);
+        $expression = $this->calculate($expression, $context);
 
         if (preg_match('~^`[a-f\d]{32}`$~', $expression)) {
-            $result = $this->recall($expression);
-            $this->memory = [];
-            return $result;
+            return $this->recall($expression);
         }
 
         throw new SyntaxException('Unexpected execution exception');
@@ -117,16 +116,17 @@ class Executor
 
     /**
      * @param string $expression
+     * @param array $context
      * @return string
      */
-    private function calculate(string $expression): string
+    private function calculate(string $expression, array $context): string
     {
         if (!preg_match('~^`[a-f\d]{32}`$~', $expression)) {
             $changed = true;
             while ($changed) {
                 $before = $expression;
-                $expression = $this->calcFunctions($expression);
-                $expression = $this->calcOperations($expression);
+                $expression = $this->calcFunctions($expression, $context);
+                $expression = $this->calcOperations($expression, $context);
                 $changed = $before !== $expression;
             }
         }
@@ -239,7 +239,7 @@ class Executor
         return $expression;
     }
 
-    private function calcFunctions(string $expression): string
+    private function calcFunctions(string $expression, array $context): string
     {
         foreach ($this->functions as $function) {
             $name = $function->getName();
@@ -272,7 +272,7 @@ class Executor
                     );
                 }
 
-                $value = $function->execute($arguments);
+                $value = $function->execute($arguments, $context);
 
                 $expr = $matches[0];
                 $expression = str_replace($expr, $this->remember($expr, $value), $expression);
@@ -281,7 +281,7 @@ class Executor
         return $expression;
     }
 
-    private function calcOperations(string $expression): string
+    private function calcOperations(string $expression, array $context): string
     {
         $regexps = [
             ['~\((`[a-f\d]{32}`)', '(`[a-f\d]{32}`)\)~'],
@@ -295,7 +295,7 @@ class Executor
                 while (preg_match($regexp, $expression, $matches)) {
                     $leftOperand = $this->recall($matches[1]);
                     $rightOperand = $this->recall($matches[2]);
-                    $result = $operator->execute($leftOperand, $rightOperand);
+                    $result = $operator->execute($leftOperand, $rightOperand, $context);
                     $token = $this->remember($matches[0], $result);
                     $expression = str_replace($matches[0], $token, $expression);
                 }

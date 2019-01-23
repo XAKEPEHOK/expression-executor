@@ -23,9 +23,10 @@ interface OperatorInterface
     /**
      * @param $leftOperand
      * @param $rightOperand
+     * @param array $context - any common data, that passed to @see \XAKEPEHOK\ExpressionExecutor\Executor::execute()
      * @return mixed
      * Use @see OperatorException if needed
      */
-    public function execute($leftOperand, $rightOperand);
+    public function execute($leftOperand, $rightOperand, array $context);
 
 }

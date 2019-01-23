@@ -16,9 +16,10 @@ interface FunctionInterface
 
     /**
      * @param array $arguments
+     * @param array $context - any common data, that passed to @see \XAKEPEHOK\ExpressionExecutor\Executor::execute()
      * @return mixed
      * Use @see FunctionException in needed
      */
-    public function execute(array $arguments);
+    public function execute(array $arguments, array $context);
 
 }

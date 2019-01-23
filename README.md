@@ -153,8 +153,8 @@ in your classes (functions and operators)
 - Functions arguments can be named `NUMBER_OF_DAY(year: "2019", month: "01", day: "20")` and unnamed
 NUMBER_OF_DAY("2019", "01", "20"), but not combined
 - Function arguments can be strings, numbers, variables, constants, other functions result and any expressions
-- You can pass context (any array data) as second param for `execute()` method. Context will be passed
-to variable callable  
+- You can pass context (any common data as array) as second param for `execute()` method. Context will be passed to
+functions, operators and variables callable
 - Use brackets `(2 + 2) * 2` for priority
 - Use brackets for negative numbers, such as `(-1)`, `(-1.2)`
 - You can implement any operator, such as `>`, `>=`, `<`, `<=` and any what you want and desire
