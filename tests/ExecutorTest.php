@@ -265,7 +265,7 @@ class ExecutorTest extends TestCase
                 'TEN' => 10,
                 'FIVE' => 5,
                 'STRING' => 'Awesome!',
-                'CONTEXT.VALUE' => $context['VALUE']
+                'CONTEXT.VALUE' => $context['VALUE'] ?? null
             ];
             return $vars[$name];
         };
