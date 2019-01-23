@@ -150,10 +150,9 @@ class Executor
                 $value = ($this->variables)($matches[1]);
             } else {
                 $value = $this->variables[$matches[1]];
-            }
-
-            if (is_callable($value)) {
-                $value = $value($matches[1]);
+                if (is_callable($value)) {
+                    $value = $value($matches[1]);
+                }
             }
 
             $expression = str_replace(
