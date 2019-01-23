@@ -130,7 +130,13 @@ Create executor instance:
 $executor = new \XAKEPEHOK\ExpressionExecutor\Executor(
     [new MinFunction(), new NumberOfDayFunction()],
     [new PlusOperator(), new MultiplyOperator()],
-    ['VARIABLE' => 10],
+    function ($name, array $context) {
+        $vars = [
+            'VARIABLE' => 10,
+            'CONTEXT.VALUE' => $context['value'],
+        ];
+        return $vars[$name];
+    },
     ['PI' => 3.14]
 );
 
@@ -142,12 +148,13 @@ $result = $executor->execute('MIN(5, 10.5) + NUMBER_OF_DAY(year: "2019", month: 
 - Its safe. No `eval()`
 - Executor can return and work with any types of data. All types checking and manipulating should be implemented
 in your classes (functions and operators)
-- Arguments support escaped double quotes, for example `"My name is \"Timur\""`
+- String arguments support escaped double quotes, for example `"My name is \"Timur\""`
 - Functions accept any count of arguments (you can limit in function body by exceptions)
 - Functions arguments can be named `NUMBER_OF_DAY(year: "2019", month: "01", day: "20")` and unnamed
 NUMBER_OF_DAY("2019", "01", "20"), but not combined
 - Function arguments can be strings, numbers, variables, constants, other functions result and any expressions
-- You can use callable instead of variables array
+- You can pass context (any array data) as second param for `execute()` method. Context will be passed
+to variable callable  
 - Use brackets `(2 + 2) * 2` for priority
 - Use brackets for negative numbers, such as `(-1)`, `(-1.2)`
 - You can implement any operator, such as `>`, `>=`, `<`, `<=` and any what you want and desire

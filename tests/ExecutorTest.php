@@ -46,7 +46,8 @@ class ExecutorTest extends TestCase
     /** @var OperatorInterface[] */
     private $operators;
 
-    private $vars = [];
+    /** @var callable */
+    private $vars;
 
     private $constants = [];
 
@@ -218,11 +219,15 @@ class ExecutorTest extends TestCase
             $this->operator_divide_alt,
         ];
 
-        $this->vars = [
-            'TEN' => 10,
-            'FIVE' => 5,
-            'STRING' => 'Awesome!',
-        ];
+        $this->vars = function ($name, array $context = []) {
+            $vars = [
+                'TEN' => 10,
+                'FIVE' => 5,
+                'STRING' => 'Awesome!',
+                'CONTEXT.VALUE' => $context['value']
+            ];
+            return $this->$vars[$name];
+        };
 
         $this->constants = [
             'PI' => 3.14,
@@ -323,37 +328,6 @@ class ExecutorTest extends TestCase
         ]);
     }
 
-    public function invalidVariableNameProvider(): array
-    {
-        return [
-            [['hello-world' => 10]],
-            [['hello world' => 10]],
-            [['hello+world' => 10]],
-        ];
-    }
-
-    /**
-     * @dataProvider invalidVariableNameProvider
-     * @param $variables
-     * @throws ExecutorException
-     */
-    public function testConstructInvalidVariableName($variables)
-    {
-        $this->expectException(ExecutorException::class);
-        $this->expectExceptionCode(3);
-        new Executor($this->functions, $this->operators, $variables);
-    }
-
-    public function testConstructCallableVariables()
-    {
-        $executor = new Executor($this->functions, $this->operators, function ($variable) {
-            return $variable;
-        });
-
-        $this->assertEquals($executor->execute('{{hello}}'), 'hello');
-        $this->assertEquals($executor->execute('{{hello.world}}'), 'hello.world');
-    }
-
     public function invalidConstantNameProvider(): array
     {
         return [
@@ -385,16 +359,16 @@ class ExecutorTest extends TestCase
             ['"`e049f681893a971fb67a1be465808f82`"', '`e049f681893a971fb67a1be465808f82`'],
             ['"+"', '+'],
             ['"LENGTH({{STRING}})"', 'LENGTH({{STRING}})'],
-            ['{{STRING}}', $this->vars['STRING']],
+            ['{{STRING}}', ($this->vars)('STRING')],
 
             ['LENGTH("HELLO")', mb_strlen('HELLO')],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
             ['LENGTH(PI)', mb_strlen($this->constants['PI'])],
-            ['LENGTH({{STRING}})', mb_strlen($this->vars['STRING'])],
+            ['LENGTH({{STRING}})', mb_strlen(($this->vars)('STRING'))],
             ['LENGTH("\"HELLO\"")', mb_strlen('"HELLO"')],
             ['LENGTH(string: "HELLO")', mb_strlen('HELLO')],
-            ['LENGTH(string: {{STRING}})', mb_strlen($this->vars['STRING'])],
+            ['LENGTH(string: {{STRING}})', mb_strlen(($this->vars)('STRING'))],
 
             ['MIN("1", "2")', min(["1", "2"])],
             ['MIN(1, 2)', min([1, 2])],
@@ -409,20 +383,20 @@ class ExecutorTest extends TestCase
             ['MIN(value_1: (-0.1), value_2: (-1.2))', min([-0.1, -1.2])],
 
             ['MIN(value_1: LENGTH({{STRING}}), value_2: {{TEN}})', min([
-                mb_strlen($this->vars['STRING']),
-                $this->vars['TEN']
+                mb_strlen(($this->vars)('STRING')),
+                    ($this->vars)('TEN')
             ])],
 
             ['MIN("2", "3", "4")', min(["2", "3", "4"])],
             ['MIN({{TEN}}, "3", LENGTH({{STRING}}))', min([
-                $this->vars['TEN'],
+                ($this->vars)('TEN'),
                 "3",
-                mb_strlen($this->vars['STRING'])
+                mb_strlen(($this->vars)('STRING'))
             ])],
 
             [
                 'MIN(MAX(MIN("1", "2"), "3"), MIN(MAX("5", {{TEN}}), "2"))',
-                min(max(min("1", "2"), "3"), min(max("5", $this->vars['TEN']), "2"))
+                min(max(min("1", "2"), "3"), min(max("5", ($this->vars)('TEN')), "2"))
             ],
             ['MIN(value_1: "8" : "2", value_2: "5") : "2"', min(["8" / "2", "5"]) / "2"],
             ['MIN(value_1: 8 : 2, value_2: 5 + 1.32) : 2.5', min([8 / 2, 5 + 1.32]) / 2.5],
@@ -442,8 +416,10 @@ class ExecutorTest extends TestCase
 
             [
                 '({{TEN}} + 3.3) * MAX(2 + 3, LENGTH(string: {{STRING}}))',
-                ($this->vars['TEN'] + 3.3) * MAX([2 + 3, mb_strlen($this->vars['STRING'])])
+                (($this->vars)('TEN') + 3.3) * MAX([2 + 3, mb_strlen(($this->vars)('STRING'))])
             ],
+
+            ['5 + {{CONTEXT.VALUE}}', 5, ['value' => 10]],
         ];
     }
 
@@ -451,11 +427,12 @@ class ExecutorTest extends TestCase
      * @dataProvider validExpressionProvider
      * @param string $expression
      * @param $expected
-     * @throws Exceptions\SyntaxException
+     * @param array $context
+     * @throws SyntaxException
      */
-    public function testExecute(string $expression, $expected)
+    public function testExecute(string $expression, $expected, array $context = [])
     {
-        $actual = $this->executor->execute($expression);
+        $actual = $this->executor->execute($expression, $context);
         $this->assertEquals($expected, $actual);
     }
 

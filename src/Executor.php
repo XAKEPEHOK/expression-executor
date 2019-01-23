@@ -35,16 +35,16 @@ class Executor
 
     /**
      * Executor constructor.
-     * @param FunctionInterface[]|callable[] $functions
+     * @param FunctionInterface[] $functions
      * @param OperatorInterface[] $operators
-     * @param array|callable $variables
+     * @param callable $variables
      * @param array $constants
      * @throws ExecutorException
      */
     public function __construct(
         array $functions,
         array $operators,
-        $variables = null,
+        callable $variables = null,
         array $constants = []
     )
     {
@@ -79,17 +79,7 @@ class Executor
             return ($operator_1->priority() < $operator_2->priority()) ? 1 : -1;
         });
 
-
-
-        if (is_array($variables)) {
-            foreach ($variables as $name => $value) {
-                if (!preg_match('~^[a-z\d_\.]+$~i', $name)) {
-                    throw new ExecutorException("Invalid variable name «{$name}»: name should be match [a-z\d_\.]+", 3);
-                }
-            }
-        }
-        $this->variables = $variables ?? [];
-
+        $this->variables = $variables;
 
         foreach ($constants as $name => $value) {
             if (!preg_match('~^[a-z_]{1}[a-z\d_]*$~i', $name)) {
@@ -100,15 +90,17 @@ class Executor
     }
 
     /**
+     * Execute expression and return its result
      * @param string $expression
-     * @return null|string|string[]
+     * @param array $context - any data,that will be passed to variable callable as second argument
+     * @return mixed
      * @throws SyntaxException
      */
-    public function execute(string $expression)
+    public function execute(string $expression, array $context = [])
     {
         $this->guardToken($expression);
         $expression = $this->prepareStrings($expression);
-        $expression = $this->prepareVariables($expression);
+        $expression = $this->prepareVariables($expression, $context);
         $expression = $this->prepareConstants($expression);
         $expression = $this->prepareNumbers($expression);
         $expression = preg_replace('/\s+/u', '', $expression);
@@ -127,7 +119,7 @@ class Executor
      * @param string $expression
      * @return string
      */
-    protected function calculate(string $expression): string
+    private function calculate(string $expression): string
     {
         if (!preg_match('~^`[a-f\d]{32}`$~', $expression)) {
             $changed = true;
@@ -141,19 +133,21 @@ class Executor
         return $expression;
     }
 
-    private function prepareVariables(string $expression): string
+    /**
+     * @param string $expression
+     * @param array $context
+     * @return string
+     */
+    private function prepareVariables(string $expression, array $context): string
     {
+        if ($this->variables === null) {
+            return $expression;
+        }
+
         $matches = [];
         while (preg_match('~\{\{([^\}]+)\}\}~', $expression, $matches)) {
 
-            if (is_callable($this->variables)) {
-                $value = ($this->variables)($matches[1]);
-            } else {
-                $value = $this->variables[$matches[1]];
-                if (is_callable($value)) {
-                    $value = $value($matches[1]);
-                }
-            }
+            $value = ($this->variables)($matches[1], $context);
 
             $expression = str_replace(
                 $matches[0],
