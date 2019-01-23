@@ -7,13 +7,15 @@ language for expressions, with any functions, operators and typing system.
 You can define your own operator, functions and variables. For example, you want to calc/execute expressions
 like: 
 ```
-MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") * {{VARIABLE}} + ("2" + "2") * "2"
+MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2
 ``` 
 In example above
 - `MIN` and `NUMBER_OF_DAY` - functions
 - `{{VARIABLE}}` - variable
+- `PI` - syntax user-defined constant (for example, you can define TRUE, FALSE and NULL constants)
 - `+` and `*` - operators
--  `"5"`, `"10"`, `"2019"`, ... (any number or strings in double-quotes) - arguments 
+-  `"5"`, `"10"`, `"2019"` - any strings in double-quotes - string arguments
+-  `(-2)`, `2.5`, `2` - any number int and float arguments respectively
 
 ### Installation:
 ```bash
@@ -128,11 +130,12 @@ Create executor instance:
 $executor = new \XAKEPEHOK\ExpressionExecutor\Executor(
     [new MinFunction(), new NumberOfDayFunction()],
     [new PlusOperator(), new MultiplyOperator()],
-    ['VARIABLE' => 10]
+    ['VARIABLE' => 10],
+    ['PI' => 3.14]
 );
 
 //And simply execute our expression 
-$result = $executor->execute('MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") * {{VARIABLE}} + ("2" + "2") * "2"');
+$result = $executor->execute('MIN("5", "10") + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2');
 ```
 
 ### Features
@@ -143,9 +146,10 @@ in your classes (functions and operators)
 - Functions accept any count of arguments (you can limit in function body by exceptions)
 - Functions arguments can be named `NUMBER_OF_DAY(year: "2019", month: "01", day: "20")` and unnamed
 NUMBER_OF_DAY("2019", "01", "20"), but not combined
-- Function arguments can be arguments, variables, other functions result and any expressions
+- Function arguments can be strings, numbers, variables, constants, other functions result and any expressions
 - You can use callable instead of variables array
-- Use brackets `("2" + "2") * "2"` for priority
+- Use brackets `(2 + 2) * 2` for priority
+- Use brackets for negative numbers, such as `(-1)`, `(-1.2)`
 - You can implement any operator, such as `>`, `>=`, `<`, `<=` and any what you want and desire
 
 See [ExecutorTest.php](tests/ExecutorTest.php) for more examples.
