@@ -48,6 +48,8 @@ class ExecutorTest extends TestCase
 
     private $vars = [];
 
+    private $constants = [];
+
     public function __construct(?string $name = null, array $data = [], string $dataName = '')
     {
         parent::__construct($name, $data, $dataName);
@@ -222,10 +224,16 @@ class ExecutorTest extends TestCase
             'STRING' => 'Awesome!',
         ];
 
+        $this->constants = [
+            'PI' => 3.14,
+            'G' => 9.8,
+        ];
+
         $this->executor = new Executor(
             $this->functions,
             $this->operators,
-            $this->vars
+            $this->vars,
+            $this->constants
         );
     }
 
@@ -270,6 +278,7 @@ class ExecutorTest extends TestCase
             [')'],
             ['"'],
             [','],
+            ['_'],
         ];
     }
 
@@ -345,6 +354,28 @@ class ExecutorTest extends TestCase
         $this->assertEquals($executor->execute('{{hello.world}}'), 'hello.world');
     }
 
+    public function invalidConstantNameProvider(): array
+    {
+        return [
+            [['hello-world' => 10]],
+            [['hello world' => 10]],
+            [['hello+world' => 10]],
+            [['7HELLO' => 10]],
+        ];
+    }
+
+    /**
+     * @dataProvider invalidConstantNameProvider
+     * @param $constants
+     * @throws ExecutorException
+     */
+    public function testConstructInvalidConstantName($constants)
+    {
+        $this->expectException(ExecutorException::class);
+        $this->expectExceptionCode(4);
+        new Executor($this->functions, $this->operators, $this->vars, $constants);
+    }
+
     public function validExpressionProvider(): array
     {
         return [
@@ -357,6 +388,9 @@ class ExecutorTest extends TestCase
 
 
             ['LENGTH("HELLO")', mb_strlen('HELLO')],
+            ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
+            ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
+            ['LENGTH(PI)', mb_strlen($this->constants['PI'])],
             ['LENGTH({{STRING}})', mb_strlen($this->vars['STRING'])],
             ['LENGTH("\"HELLO\"")', mb_strlen('"HELLO"')],
             ['LENGTH(string: "HELLO")', mb_strlen('HELLO')],

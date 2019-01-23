@@ -28,15 +28,25 @@ class Executor
 
     /** @var array */
     private $memory = [];
+    /**
+     * @var array
+     */
+    private $constants;
 
     /**
      * Executor constructor.
      * @param FunctionInterface[]|callable[] $functions
      * @param OperatorInterface[] $operators
      * @param array|callable $variables
+     * @param array $constants
      * @throws ExecutorException
      */
-    public function __construct(array $functions, array $operators, $variables = null)
+    public function __construct(
+        array $functions,
+        array $operators,
+        $variables = null,
+        array $constants = []
+    )
     {
         foreach ($functions as $function) {
             if (!($function instanceof FunctionInterface)) {
@@ -54,8 +64,8 @@ class Executor
                 throw new ExecutorException('Operator should be instance of ' . OperatorInterface::class, 2);
             }
 
-            if (preg_match('~["\(\),]~', $operator->operator())) {
-                throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain commas, brackets and double-quotes", 22);
+            if (preg_match('~["\(\),_]~', $operator->operator())) {
+                throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain commas, brackets, underscore and double-quotes", 22);
             }
 
         }
@@ -79,6 +89,14 @@ class Executor
             }
         }
         $this->variables = $variables ?? [];
+
+
+        foreach ($constants as $name => $value) {
+            if (!preg_match('~^[a-z_]{1}[a-z\d_]*$~i', $name)) {
+                throw new ExecutorException("Invalid constant name «{$name}»: name should be match ^[a-z_]{1}[a-z\d_]*$", 4);
+            }
+        }
+        $this->constants = $constants;
     }
 
     /**
@@ -91,6 +109,7 @@ class Executor
         $this->guardToken($expression);
         $expression = $this->prepareArguments($expression);
         $expression = $this->prepareVariables($expression);
+        $expression = $this->prepareConstants($expression);
         $expression = preg_replace('/\s+/u', '', $expression);
         $expression = $this->calculate($expression);
 
@@ -158,6 +177,22 @@ class Executor
             $expression = str_replace(
                 $matches[0],
                 $this->remember($matches[0], str_replace('\"', '"', $matches[1])),
+                $expression
+            );
+        }
+        return $expression;
+    }
+
+
+    private function prepareConstants(string $expression): string
+    {
+        foreach ($this->constants as $name => $value) {
+            $regexp = '~(?<![a-z\d_])' . preg_quote($name) . '(?![a-z\d_])~i';
+            $expression = preg_replace_callback(
+                $regexp,
+                function ($matches) use ($value) {
+                    return $this->remember($matches[0], $value);
+                },
                 $expression
             );
         }
