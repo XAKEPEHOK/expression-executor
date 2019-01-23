@@ -15,7 +15,7 @@ In example above
 - `PI` - syntax user-defined constant (for example, you can define TRUE, FALSE and NULL constants)
 - `+` and `*` - operators
 -  `"5"`, `"10"`, `"2019"` - strings in double-quotes
--  `5`, `10.5`, (-2)`, `2.5`, `2` - int/float as is, but negative values should be wrapped in brackets
+-  `5`, `10.5`, `(-2)`, `2.5`, `2` - int/float as is, but negative values should be wrapped in brackets
 
 ### Installation:
 ```bash
