@@ -37,7 +37,7 @@ class MinFunction implements \XAKEPEHOK\ExpressionExecutor\FunctionInterface
         return 'MIN';
     }
 
-    public function execute(array $arguments)
+    public function execute(array $arguments, array $context)
     {
         return min($arguments);
     }
@@ -55,7 +55,7 @@ class NumberOfDayFunction implements \XAKEPEHOK\ExpressionExecutor\FunctionInter
         return 'NUMBER_OF_DAY';
     }
 
-    public function execute(array $arguments)
+    public function execute(array $arguments, array $context)
     {
         $year = $arguments['year'] ?? ($arguments[0] ?? null);
         $month = $arguments['month'] ?? ($arguments[1] ?? null);
@@ -90,7 +90,7 @@ class PlusOperator implements \XAKEPEHOK\ExpressionExecutor\OperatorInterface
         return 1;
     }
     
-    public function execute($leftOperand, $rightOperand)
+    public function execute($leftOperand, $rightOperand, array $context)
     {
         return $leftOperand + $rightOperand;
     }    
@@ -117,7 +117,7 @@ class MultiplyOperator implements \XAKEPEHOK\ExpressionExecutor\OperatorInterfac
         return 2;
     }
     
-    public function execute($leftOperand, $rightOperand)
+    public function execute($leftOperand, $rightOperand, array $context)
     {
         return $leftOperand * $rightOperand;
     }    
