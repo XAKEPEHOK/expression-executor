@@ -107,9 +107,10 @@ class Executor
     public function execute(string $expression)
     {
         $this->guardToken($expression);
-        $expression = $this->prepareArguments($expression);
+        $expression = $this->prepareStrings($expression);
         $expression = $this->prepareVariables($expression);
         $expression = $this->prepareConstants($expression);
+        $expression = $this->prepareNumbers($expression);
         $expression = preg_replace('/\s+/u', '', $expression);
         $expression = $this->calculate($expression);
 
@@ -169,7 +170,7 @@ class Executor
      * @param string $expression
      * @return string
      */
-    private function prepareArguments(string $expression): string
+    private function prepareStrings(string $expression): string
     {
         $matches = [];
         $regexp = '~(?<!\\\\)(?:\\\\{2})*"((?:(?<!\\\\)(?:\\\\{2})*\\\\"|[^"])+(?<!\\\\)(?:\\\\{2})*)"~';
@@ -180,6 +181,52 @@ class Executor
                 $expression
             );
         }
+        return $expression;
+    }
+
+    /**
+     * @see https://stackoverflow.com/a/41470813
+     * @param string $expression
+     * @return string
+     */
+    private function prepareNumbers(string $expression): string
+    {
+        //float negative
+        $expression = preg_replace_callback(
+            '~(?<![\da-z_])(?:\(-)((?:(?:0\.)|(?:[1-9]\d*\.))\d+)(?:\))(?![\da-z_])~i',
+            function ($matches) {
+                return $this->remember($matches[0], ((float) $matches[1]) * -1);
+            },
+            $expression
+        );
+
+        //float positive
+        $expression = preg_replace_callback(
+            '~(?<![\da-z_])(((0\.)|([1-9]\d*\.))\d+)(?![\da-z_])~i',
+            function ($matches) {
+                return $this->remember($matches[0], (float) $matches[0]);
+            },
+            $expression
+        );
+
+        //integer negative
+        $expression = preg_replace_callback(
+            '~(?<![\da-z_])(?:\(-)((?:0)|(?:[1-9]\d*))(?![\d])(?:\))(?![\da-z_])~i',
+            function ($matches) {
+                return $this->remember($matches[0], ((int) $matches[1]) * -1);
+            },
+            $expression
+        );
+
+        //integer positive
+        $expression = preg_replace_callback(
+            '~(?<![\da-z_])((0)|([1-9]\d*))(?![\d])(?![\da-z_])~i',
+            function ($matches) {
+                return $this->remember($matches[0], (int) $matches[0]);
+            },
+            $expression
+        );
+
         return $expression;
     }
 

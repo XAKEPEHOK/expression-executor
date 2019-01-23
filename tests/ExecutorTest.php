@@ -361,6 +361,7 @@ class ExecutorTest extends TestCase
             [['hello world' => 10]],
             [['hello+world' => 10]],
             [['7HELLO' => 10]],
+            [['7.5HELLO' => 10]],
         ];
     }
 
@@ -386,7 +387,6 @@ class ExecutorTest extends TestCase
             ['"LENGTH({{STRING}})"', 'LENGTH({{STRING}})'],
             ['{{STRING}}', $this->vars['STRING']],
 
-
             ['LENGTH("HELLO")', mb_strlen('HELLO')],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
@@ -397,7 +397,17 @@ class ExecutorTest extends TestCase
             ['LENGTH(string: {{STRING}})', mb_strlen($this->vars['STRING'])],
 
             ['MIN("1", "2")', min(["1", "2"])],
+            ['MIN(1, 2)', min([1, 2])],
+            ['MIN(1.2, 2.3)', min([1.2, 2.3])],
+            ['MIN((-1), (-2))', min([-1, -2])],         //17
+            ['MIN((-1.2), (-2.3))', min([-1.2, -2.3])],
+
             ['MIN(value_1: "1", value_2: "2")', min(["1", "2"])],
+            ['MIN(value_1: 1, value_2: 2)', min([1, 2])],
+            ['MIN(value_1: 0.1, value_2: 1.2)', min([0.1, 1.2])],
+            ['MIN(value_1: (-1), value_2: (-2))', min([-1, -2])],
+            ['MIN(value_1: (-0.1), value_2: (-1.2))', min([-0.1, -1.2])],
+
             ['MIN(value_1: LENGTH({{STRING}}), value_2: {{TEN}})', min([
                 mb_strlen($this->vars['STRING']),
                 $this->vars['TEN']
@@ -415,13 +425,24 @@ class ExecutorTest extends TestCase
                 min(max(min("1", "2"), "3"), min(max("5", $this->vars['TEN']), "2"))
             ],
             ['MIN(value_1: "8" : "2", value_2: "5") : "2"', min(["8" / "2", "5"]) / "2"],
+            ['MIN(value_1: 8 : 2, value_2: 5 + 1.32) : 2.5', min([8 / 2, 5 + 1.32]) / 2.5],
 
             ['"2" + "3"', 5],
-            ['"2" + "3" * "2"', 8],
-            ['("2" + "3") * "2"', 10],
+            ['2 + 3', 5],
+            ['2.2 + 3.3', 5.5],
+
+            ['"2" + "3" * "2"', 2 + 3 * 2],
+            ['2 + 3 * 2', 2 + 3 * 2],
+            ['2.2 + 3.3 * 2.2', 2.2 + 3.3 * 2.2],
+
+            ['("2" + "3") * "2"', (2 + 3) * 2],
+            ['(2 + 3) * 2', (2 + 3) * 2],
+            ['(2.2 + 3.3) * 2.2', (2.2 + 3.3) * 2.2],
+
+
             [
-                '({{TEN}} + "3") * MAX("2" + "3", LENGTH(string: {{STRING}}))',
-                ($this->vars['TEN'] + "3") * MAX(["2" + "3", mb_strlen($this->vars['STRING'])])
+                '({{TEN}} + 3.3) * MAX(2 + 3, LENGTH(string: {{STRING}}))',
+                ($this->vars['TEN'] + 3.3) * MAX([2 + 3, mb_strlen($this->vars['STRING'])])
             ],
         ];
     }
@@ -447,7 +468,6 @@ class ExecutorTest extends TestCase
             ['`e049f681893a971fb67a1be465808f82`'],
             ['"2" ~ "3"'],
             ['"2" + "3'],
-            ['"2" + 3'],
             ['"2" + 3"'],
             ['UNKNOWN("10")'],
             ['("2" + "3"))'],
