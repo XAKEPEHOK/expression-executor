@@ -174,6 +174,13 @@ class Executor
                 $expression
             );
         }
+
+        $expression = str_replace(
+            '""',
+            $this->remember('""', ''),
+            $expression
+        );
+
         return $expression;
     }
 

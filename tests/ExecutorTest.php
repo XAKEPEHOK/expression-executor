@@ -394,13 +394,14 @@ class ExecutorTest extends TestCase
 
     public function validExpressionProvider(): array
     {
-        return [
+        $examples = [
             ['"HELLO"', 'HELLO'],
             ['"\"HELLO\""', '"HELLO"'],
             ['"`e049f681893a971fb67a1be465808f82`"', '`e049f681893a971fb67a1be465808f82`'],
             ['"+"', '+'],
             ['"LENGTH({{STRING}})"', 'LENGTH({{STRING}})'],
             ['{{STRING}}', ($this->vars)('STRING')],
+            ['""', ''],
 
             ['LENGTH("HELLO")', mb_strlen('HELLO')],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
@@ -466,6 +467,8 @@ class ExecutorTest extends TestCase
                 'second' => "success",
             ]]],
         ];
+
+        return array_combine(array_column($examples, 0), $examples);
     }
 
     /**
