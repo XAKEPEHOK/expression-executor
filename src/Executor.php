@@ -7,31 +7,34 @@
 namespace XAKEPEHOK\ExpressionExecutor;
 
 
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionComponentInterface;
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionConstant;
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionFloat;
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionFunction;
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionInteger;
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionOperation;
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionString;
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionVariable;
 use XAKEPEHOK\ExpressionExecutor\Exceptions\ExecutorException;
 use XAKEPEHOK\ExpressionExecutor\Exceptions\SyntaxException;
 
 class Executor
 {
 
-    /**
-     * @var FunctionInterface[]|callable[]
-     */
+    /** @var FunctionInterface[]|callable[] */
     private $functions;
-    /**
-     * @var callable[]|mixed[]
-     */
+
+    /** @var callable[]|mixed[] */
     private $variables;
-    /**
-     * @var OperatorInterface[]
-     */
+
+    /** @var OperatorInterface[] */
     private $operators;
 
     /** @var array */
-    private $memory = [];
-    /**
-     * @var array
-     */
     private $constants;
+
+    /** @var ExpressionComponentInterface[] */
+    private $simplifications = [];
 
     /**
      * Executor constructor.
@@ -98,7 +101,7 @@ class Executor
      */
     public function execute(string $expression, array $context = [])
     {
-        $this->memory = [];
+        $this->simplifications = [];
         $this->guardToken($expression);
         $expression = $this->prepareStrings($expression);
         $expression = $this->prepareVariables($expression, $context);
@@ -112,6 +115,97 @@ class Executor
         }
 
         throw new SyntaxException('Unexpected execution exception');
+    }
+
+    /**
+     * @param string $expression
+     * @param array $context
+     * @return array
+     * @throws SyntaxException
+     */
+    public function explain(string $expression, array $context = []): array
+    {
+        $this->execute($expression, $context);
+        end($this->simplifications);
+        return $this->buildTree(key($this->simplifications));
+    }
+
+    public function buildTree(string $hash): array
+    {
+        /** @var ExpressionComponentInterface $component */
+        $component = $this->simplifications[$hash]['component'];
+
+        $result = [];
+
+        if ($component instanceof ExpressionConstant) {
+            $result = [
+                'type' => 'CONSTANT',
+                'name' => $component->getName(),
+                'calculated' => $component->getValue(),
+            ];
+        }
+
+        if ($component instanceof ExpressionFloat) {
+            $result = [
+                'type' => 'FLOAT',
+                'value' => $component->getValue(),
+                'calculated' => $component->getValue(),
+            ];
+        }
+
+        if ($component instanceof ExpressionFunction) {
+            $result = [
+                'type' => 'FUNCTION',
+                'name' => $component->getName(),
+                'arguments' => [],
+                'calculated' => $component->getValue(),
+            ];
+
+            foreach ($component->getArguments() as $argument => $value) {
+                $result['arguments'][$argument] = $this->buildTree($value);
+            }
+        }
+
+        if ($component instanceof ExpressionInteger) {
+            $result = [
+                'type' => 'INTEGER',
+                'value' => $component->getValue(),
+                'calculated' => $component->getValue(),
+            ];
+        }
+
+        if ($component instanceof ExpressionOperation) {
+            $result = [
+                'type' => 'OPERATION',
+                'operation' => $component->getOperation(),
+                'leftOperand' => $this->buildTree($component->getLeftOperand()),
+                'rightOperand' => $this->buildTree($component->getRightOperand()),
+                'calculated' => $component->getValue(),
+            ];
+        }
+
+        if ($component instanceof ExpressionString) {
+            $result = [
+                'type' => 'STRING',
+                'value' => $component->getValue(),
+                'calculated' => $component->getValue(),
+            ];
+        }
+
+        if ($component instanceof ExpressionVariable) {
+            $result = [
+                'type' => 'VARIABLE',
+                'name' => $component->getName(),
+                'calculated' => $component->getValue(),
+            ];
+        }
+
+        return $result;
+    }
+
+    private function getComponentByHash(string $hash): ExpressionComponentInterface
+    {
+        return $this->simplifications[$hash]['component'];
     }
 
     /**
@@ -151,7 +245,7 @@ class Executor
 
             $expression = str_replace(
                 $matches[0],
-                $this->remember($matches[0], $value),
+                $this->simplify($matches[0], new ExpressionVariable($matches[0], $value)),
                 $expression
             );
         }
@@ -168,16 +262,17 @@ class Executor
         $matches = [];
         $regexp = '~(?<!\\\\)(?:\\\\{2})*"((?:(?<!\\\\)(?:\\\\{2})*\\\\"|[^"])+(?<!\\\\)(?:\\\\{2})*)"~';
         while (preg_match($regexp, $expression, $matches)) {
+            $value = str_replace('\"', '"', $matches[1]);
             $expression = str_replace(
                 $matches[0],
-                $this->remember($matches[0], str_replace('\"', '"', $matches[1])),
+                $this->simplify($matches[0], new ExpressionString($value)),
                 $expression
             );
         }
 
         $expression = str_replace(
             '""',
-            $this->remember('""', ''),
+            $this->simplify('""', new ExpressionString('')),
             $expression
         );
 
@@ -195,7 +290,8 @@ class Executor
         $expression = preg_replace_callback(
             '~(?<![\da-z_])(?:\(-)((?:(?:0\.)|(?:[1-9]\d*\.))\d+)(?:\))(?![\da-z_])~i',
             function ($matches) {
-                return $this->remember($matches[0], ((float) $matches[1]) * -1);
+                $value = ((float) $matches[1]) * -1;
+                return $this->simplify($matches[0], new ExpressionFloat($value));
             },
             $expression
         );
@@ -204,7 +300,8 @@ class Executor
         $expression = preg_replace_callback(
             '~(?<![\da-z_])(((0\.)|([1-9]\d*\.))\d+)(?![\da-z_])~i',
             function ($matches) {
-                return $this->remember($matches[0], (float) $matches[0]);
+                $value = (float) $matches[0];
+                return $this->simplify($matches[0], new ExpressionFloat($value));
             },
             $expression
         );
@@ -213,7 +310,8 @@ class Executor
         $expression = preg_replace_callback(
             '~(?<![\da-z_])(?:\(-)((?:0)|(?:[1-9]\d*))(?![\d])(?:\))(?![\da-z_])~i',
             function ($matches) {
-                return $this->remember($matches[0], ((int) $matches[1]) * -1);
+                $value = ((int) $matches[1]) * -1;
+                return $this->simplify($matches[0], new ExpressionInteger($value));
             },
             $expression
         );
@@ -222,7 +320,8 @@ class Executor
         $expression = preg_replace_callback(
             '~(?<![\da-z_])((0)|([1-9]\d*))(?![\d])(?![\da-z_])~i',
             function ($matches) {
-                return $this->remember($matches[0], (int) $matches[0]);
+                $value = (int) $matches[0];
+                return $this->simplify($matches[0], new ExpressionInteger($value));
             },
             $expression
         );
@@ -237,8 +336,8 @@ class Executor
             $regexp = '~(?<![a-z\d_])' . preg_quote($name) . '(?![a-z\d_])~i';
             $expression = preg_replace_callback(
                 $regexp,
-                function ($matches) use ($value) {
-                    return $this->remember($matches[0], $value);
+                function ($matches) use ($name, $value) {
+                    return $this->simplify($matches[0], new ExpressionConstant($name, $value));
                 },
                 $expression
             );
@@ -262,14 +361,14 @@ class Executor
 
                 if (!empty($matches[1])) {
                     $arguments = array_map(function ($token) {
-                        return $this->recall($token);
+                        return $token;
                     }, explode(',', $matches[1]));
                 } else {
                     $arguments = array_map(function ($token) {
-                        list($key, $value) = explode(':', $token);
+                        [$key, $value] = explode(':', $token);
                         return [
                             'key' => $key,
-                            'value' => $this->recall($value),
+                            'value' => $value,
                         ];
                     }, explode(',', $matches[2]));
 
@@ -279,10 +378,17 @@ class Executor
                     );
                 }
 
-                $value = $function->execute($arguments, $context);
-
                 $expr = $matches[0];
-                $expression = str_replace($expr, $this->remember($expr, $value), $expression);
+                $value = $function->execute(array_map(function ($value) {
+                    return $this->recall($value);
+                }, $arguments), $context);
+                $component = new ExpressionFunction($function->getName(), $arguments, $value);
+
+                $expression = str_replace(
+                    $expr,
+                    $this->simplify($expr, $component),
+                    $expression
+                );
             }
         }
         return $expression;
@@ -302,8 +408,9 @@ class Executor
                 while (preg_match($regexp, $expression, $matches)) {
                     $leftOperand = $this->recall($matches[1]);
                     $rightOperand = $this->recall($matches[2]);
-                    $result = $operator->execute($leftOperand, $rightOperand, $context);
-                    $token = $this->remember($matches[0], $result);
+                    $value = $operator->execute($leftOperand, $rightOperand, $context);
+                    $component = new ExpressionOperation($operator->operator(), $matches[1], $matches[2], $value);
+                    $token = $this->simplify($matches[0], $component);
                     $expression = str_replace($matches[0], $token, $expression);
                 }
             }
@@ -339,20 +446,17 @@ class Executor
         return $expression;
     }
 
-    private function remember($expression, $value): string
+    private function simplify($expression, ExpressionComponentInterface $component): string
     {
         $hash = md5($expression);
-        $this->memory[$hash] = [
-            'expr' => $expression,
-            'value' => $value
-        ];
+        $this->simplifications[$hash] = $component;
         return '`' . $hash . '`';
     }
 
     private function recall($token)
     {
         $token = trim($token, '` ');
-        return $this->memory[$token]['value'];
+        return $this->simplifications[$token]->getValue();
     }
 
 }
