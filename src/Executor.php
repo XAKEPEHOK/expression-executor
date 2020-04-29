@@ -7,6 +7,7 @@
 namespace XAKEPEHOK\ExpressionExecutor;
 
 
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionBrackets;
 use XAKEPEHOK\ExpressionExecutor\Components\ExpressionComponentInterface;
 use XAKEPEHOK\ExpressionExecutor\Components\ExpressionConstant;
 use XAKEPEHOK\ExpressionExecutor\Components\ExpressionFloat;
@@ -130,12 +131,20 @@ class Executor
         return $this->buildTree(key($this->simplifications));
     }
 
-    public function buildTree(string $hash): array
+    public function buildTree($hashOrComponent): array
     {
-        /** @var ExpressionComponentInterface $component */
-        $component = $this->simplifications[$hash]['component'];
-
         $result = [];
+
+        if ($hashOrComponent instanceof ExpressionComponentInterface) {
+            $component = $hashOrComponent;
+        } else $component = $this->simplifications[$hashOrComponent];
+
+        if ($component instanceof ExpressionBrackets) {
+            $result = [
+                'type' => 'BRACKETS',
+                'calculated' => $this->buildTree($component->getValue()),
+            ];
+        }
 
         if ($component instanceof ExpressionConstant) {
             $result = [
@@ -397,11 +406,11 @@ class Executor
     private function calcOperations(string $expression, array $context): string
     {
         $regexps = [
-            ['~\((`[a-f\d]{32}`)', '(`[a-f\d]{32}`)\)~'],
-            ['~(`[a-f\d]{32}`)', '(`[a-f\d]{32}`)~'],
+            'brackets' => ['~\((`[a-f\d]{32}`)', '(`[a-f\d]{32}`)\)~'],
+            'simple' => ['~(`[a-f\d]{32}`)', '(`[a-f\d]{32}`)~'],
         ];
 
-        foreach ($regexps as $regexpPriority) {
+        foreach ($regexps as $type => $regexpPriority) {
             foreach ($this->operators as $operator) {
                 $regexp = $regexpPriority[0] . preg_quote($operator->operator(), '~') . $regexpPriority[1];
                 $matches = [];
@@ -410,6 +419,11 @@ class Executor
                     $rightOperand = $this->recall($matches[2]);
                     $value = $operator->execute($leftOperand, $rightOperand, $context);
                     $component = new ExpressionOperation($operator->operator(), $matches[1], $matches[2], $value);
+
+                    if ($type === 'brackets') {
+                        $component = new ExpressionBrackets($component);
+                    }
+
                     $token = $this->simplify($matches[0], $component);
                     $expression = str_replace($matches[0], $token, $expression);
                 }
@@ -456,7 +470,11 @@ class Executor
     private function recall($token)
     {
         $token = trim($token, '` ');
-        return $this->simplifications[$token]->getValue();
+        $component = $this->simplifications[$token];
+        while ($component instanceof ExpressionBrackets) {
+            $component = $component->getValue();
+        }
+        return $component->getValue();
     }
 
 }

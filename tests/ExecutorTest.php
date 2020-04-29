@@ -400,6 +400,8 @@ class ExecutorTest extends TestCase
             ['"`e049f681893a971fb67a1be465808f82`"', '`e049f681893a971fb67a1be465808f82`'],
             ['"+"', '+'],
             ['"LENGTH({{STRING}})"', 'LENGTH({{STRING}})'],
+            ['LENGTH("\"{{TEN}}\"")', 9],
+            ['LENGTH("LENGTH(\"{{TEN}}\")")', 17],
             ['{{STRING}}', ($this->vars)('STRING')],
             ['""', ''],
 
@@ -435,6 +437,11 @@ class ExecutorTest extends TestCase
                 "3",
                 mb_strlen(($this->vars)('STRING'))
             ])],
+
+            [
+                'MIN(MAX(MIN("1", "2"), "3"), MIN(MAX("5", {{TEN}}), "2"))',
+                min(max(min("1", "2"), "3"), min(max("5", ($this->vars)('TEN')), "2"))
+            ],
 
             [
                 'MIN(MAX(MIN("1", "2"), "3"), MIN(MAX("5", {{TEN}}), "2"))',
