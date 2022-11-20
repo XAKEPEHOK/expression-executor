@@ -14,7 +14,7 @@ class ExecutorTest extends TestCase
 {
 
     /** @var Executor */
-    private $executor;
+    private Executor $executor;
 
     /** @var FunctionInterface */
     private $func_min;
@@ -49,6 +49,9 @@ class ExecutorTest extends TestCase
     /** @var OperatorInterface */
     private $operator_context;
 
+    /** @var OperatorInterface */
+    private $operator_in;
+
     /** @var OperatorInterface[] */
     private $operators;
 
@@ -57,13 +60,13 @@ class ExecutorTest extends TestCase
 
     private $constants = [];
 
-    public function __construct(?string $name = null, array $data = [], string $dataName = '')
+    public function __construct($name = null, array $data = [], $dataName = '')
     {
         parent::__construct($name, $data, $dataName);
         $this->setUp();
     }
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -251,6 +254,27 @@ class ExecutorTest extends TestCase
                 return $context[$leftOperand][$rightOperand];
             }
         };
+        $this->operator_in = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return 'IN';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 1;
+            }
+
+            public function execute($leftOperand, $rightOperand, array $context)
+            {
+                return (int)in_array($leftOperand, $rightOperand, true);
+            }
+        };
         $this->operators = [
             $this->operator_plus,
             $this->operator_minus,
@@ -258,6 +282,7 @@ class ExecutorTest extends TestCase
             $this->operator_divide,
             $this->operator_divide_alt,
             $this->operator_context,
+            $this->operator_in,
         ];
 
         $this->vars = function ($name, array $context = []) {
@@ -283,14 +308,14 @@ class ExecutorTest extends TestCase
         );
     }
 
-    public function testConstructInvalidFunctionType()
+    public function testConstructInvalidFunctionType(): void
     {
         $this->expectException(ExecutorException::class);
         $this->expectExceptionCode(1);
         new Executor([1, 2, 3], $this->operators);
     }
 
-    public function testConstructInvalidFunctionName()
+    public function testConstructInvalidFunctionName(): void
     {
         $this->expectException(ExecutorException::class);
         $this->expectExceptionCode(11);
@@ -310,7 +335,7 @@ class ExecutorTest extends TestCase
         ], $this->operators);
     }
 
-    public function testConstructInvalidOperatorType()
+    public function testConstructInvalidOperatorType(): void
     {
         $this->expectException(ExecutorException::class);
         $this->expectExceptionCode(2);
@@ -333,7 +358,7 @@ class ExecutorTest extends TestCase
      * @param $operator
      * @throws ExecutorException
      */
-    public function testConstructInvalidOperatorName($operator)
+    public function testConstructInvalidOperatorName($operator): void
     {
         $this->expectException(ExecutorException::class);
         $this->expectExceptionCode(22);
@@ -385,7 +410,7 @@ class ExecutorTest extends TestCase
      * @param $constants
      * @throws ExecutorException
      */
-    public function testConstructInvalidConstantName($constants)
+    public function testConstructInvalidConstantName($constants): void
     {
         $this->expectException(ExecutorException::class);
         $this->expectExceptionCode(4);
@@ -473,6 +498,21 @@ class ExecutorTest extends TestCase
             ['"first" # "second"', "success", ['first' => [
                 'second' => "success",
             ]]],
+
+            ['["HELLO", "MY", "WORLD"]', ['HELLO', 'MY', 'WORLD']],
+            ['["HELLO", "MY", "WORLD",]', ['HELLO', 'MY', 'WORLD']],
+            ['["Age", "is", 25]', ['Age', 'is', 25]],
+            ['["Age", "is", 25 + 5]', ['Age', 'is', 30]],
+            ['[25 + 5 * 2, "is not", (25 + 5) * 2]', [35, 'is not', 60]],
+            ['[]', []],
+
+            ['"MY" IN ["HELLO", "MY", "WORLD"]', 1],
+            ['"HIS" IN ["HELLO", "MY", "WORLD"]', 0],
+            ['35 IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 1],
+            ['"35" IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 0],
+            ['"is not" IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 1],
+            ['30+30 IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 1],
+            ['"60" IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 0],
         ];
 
         return array_combine(array_column($examples, 0), $examples);
@@ -485,7 +525,7 @@ class ExecutorTest extends TestCase
      * @param array $context
      * @throws SyntaxException
      */
-    public function testExecute(string $expression, $expected, array $context = [])
+    public function testExecute(string $expression, $expected, array $context = []): void
     {
         $actual = $this->executor->execute($expression, $context);
         $this->assertEquals($expected, $actual);
@@ -510,6 +550,7 @@ class ExecutorTest extends TestCase
             ['"2" + "3"()'],
             ['"2" + "3" ()'],
             ['()'],
+            ['[,]'],
         ];
     }
 
@@ -519,7 +560,7 @@ class ExecutorTest extends TestCase
      * @param string $expression
      * @throws Exceptions\SyntaxException
      */
-    public function testExecuteInvalid(string $expression)
+    public function testExecuteInvalid(string $expression): void
     {
         $this->expectException(SyntaxException::class);
         $this->executor->execute($expression);

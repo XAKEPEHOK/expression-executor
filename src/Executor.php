@@ -7,6 +7,7 @@
 namespace XAKEPEHOK\ExpressionExecutor;
 
 
+use XAKEPEHOK\ExpressionExecutor\Components\ExpressionArray;
 use XAKEPEHOK\ExpressionExecutor\Components\ExpressionBrackets;
 use XAKEPEHOK\ExpressionExecutor\Components\ExpressionComponentInterface;
 use XAKEPEHOK\ExpressionExecutor\Components\ExpressionConstant;
@@ -209,6 +210,16 @@ class Executor
             ];
         }
 
+        if ($component instanceof ExpressionArray) {
+            $result = [
+                'type' => 'ARRAY',
+                'value' => array_map(function (string $token) {
+                    return $this->buildTree($token);
+                }, $component->getArray()),
+                'calculated' => $component->getValue(),
+            ];
+        }
+
         return $result;
     }
 
@@ -228,6 +239,7 @@ class Executor
             $changed = true;
             while ($changed) {
                 $before = $expression;
+                $expression = $this->prepareArrays($expression);
                 $expression = $this->calcFunctions($expression, $context);
                 $expression = $this->calcOperations($expression, $context);
                 $changed = $before !== $expression;
@@ -352,6 +364,33 @@ class Executor
             );
         }
         return $expression;
+    }
+
+    private function prepareArrays(string $expression): string
+    {
+        $expression = preg_replace_callback(
+            '~\[(?:(`[a-f\d]{32}`),)*(`[a-f\d]{32}`),?\]~i',
+            function ($matches) {
+                $array = explode(
+                    ',',
+                    trim($matches[0],'[],')
+                );
+                $value = array_map(function (string $token) {
+                    return $this->recall($token);
+                }, $array);
+
+                return $this->simplify($matches[0], new ExpressionArray($array, $value));
+            },
+            $expression
+        );
+
+        return preg_replace_callback(
+            '~\[\]~i',
+            function ($matches) {
+                return $this->simplify($matches[0], new ExpressionArray([], []));
+            },
+            $expression
+        );
     }
 
     private function calcFunctions(string $expression, array $context): string

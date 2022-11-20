@@ -17,6 +17,17 @@ In example above
 -  `"5"`, `"10"`, `"2019"` - strings in double-quotes
 -  `5`, `10.5`, `(-2)`, `2.5`, `2` - int/float as is, but negative values should be wrapped in brackets
 
+
+Also, it support arrays and boolean logic like:
+```
+("HELLO" IN ["HELLO", "WORLD"]) && (10 IN [2+2, 3+3, 5+5, "string here"])
+``` 
+where
+- `["HELLO", "WORLD"]` - array of strings
+- `[2+2, 3+3, 5+5, "string here"]` - mixed array of integers and strings
+- `IN` - operator, that check is array contain value or not
+- `&&` - logic operator "and"
+
 ### Installation:
 ```bash
 composer require xakepehok/expression-executor
@@ -124,12 +135,66 @@ class MultiplyOperator implements \XAKEPEHOK\ExpressionExecutor\OperatorInterfac
 }
 ```
 
+`IN` operator:
+```php
+<?php
+class InOperator implements \XAKEPEHOK\ExpressionExecutor\OperatorInterface 
+{
+    
+    public function operator() : string
+    {
+        return 'IN';    
+    }
+    
+    /**
+    * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+    * @return int
+    */
+    public function priority() : int
+    {
+        return 1;
+    }
+    
+    public function execute($leftOperand, $rightOperand, array $context)
+    {
+        return in_array($leftOperand, $rightOperand, true);
+    }    
+}
+```
+
+`&&` operator:
+```php
+<?php
+class AndOperator implements \XAKEPEHOK\ExpressionExecutor\OperatorInterface 
+{
+    
+    public function operator() : string
+    {
+        return '&&';    
+    }
+    
+    /**
+    * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+    * @return int
+    */
+    public function priority() : int
+    {
+        return 1;
+    }
+    
+    public function execute($leftOperand, $rightOperand, array $context)
+    {
+        return $leftOperand && $rightOperand;
+    }    
+}
+```
+
 Create executor instance:
 ```php
 <?php
 $executor = new \XAKEPEHOK\ExpressionExecutor\Executor(
     [new MinFunction(), new NumberOfDayFunction()],
-    [new PlusOperator(), new MultiplyOperator()],
+    [new PlusOperator(), new MultiplyOperator(), new InOperator(), new AndOperator()],
     function ($name, array $context) {
         $vars = [
             'VARIABLE' => 10,
@@ -141,7 +206,9 @@ $executor = new \XAKEPEHOK\ExpressionExecutor\Executor(
 );
 
 //And simply execute our expression 
-$result = $executor->execute('MIN(5, 10.5) + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2');
+$result_1 = $executor->execute('MIN(5, 10.5) + NUMBER_OF_DAY(year: "2019", month: "01", day: "20") + PI * {{VARIABLE}} + ((-2) + 2.5) * 2');
+
+$result_2 = $executor->execute('("HELLO" IN ["HELLO", "WORLD"]) && (10 IN [2+2, 3+3, 5+5, "string here"])');
 ```
 
 ### Features
