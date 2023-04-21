@@ -69,7 +69,7 @@ class Executor
                 throw new ExecutorException('Operator should be instance of ' . OperatorInterface::class, 2);
             }
 
-            if (preg_match('~["\(\),_]~', $operator->operator())) {
+            if (preg_match('~["(),_]~', $operator->operator())) {
                 throw new ExecutorException("Invalid operator «{$operator->operator()}»: operator should not contain commas, brackets, underscore and double-quotes", 22);
             }
 
@@ -87,7 +87,7 @@ class Executor
         $this->variables = $variables;
 
         foreach ($constants as $name => $value) {
-            if (!preg_match('~^[a-z_]{1}[a-z\d_]*$~i', $name)) {
+            if (!preg_match('~^[a-z_][a-z\d_]*$~i', $name)) {
                 throw new ExecutorException("Invalid constant name «{$name}»: name should be match ^[a-z_]{1}[a-z\d_]*$", 4);
             }
         }
@@ -260,7 +260,7 @@ class Executor
         }
 
         $matches = [];
-        while (preg_match('~\{\{([^\}]+)\}\}~', $expression, $matches)) {
+        while (preg_match('~\{\{([^}]+)}}~', $expression, $matches)) {
 
             $value = ($this->variables)($matches[1], $context);
 
@@ -309,7 +309,7 @@ class Executor
     {
         //float negative
         $expression = preg_replace_callback(
-            '~(?<![\da-z_])(?:\(-)((?:(?:0\.)|(?:[1-9]\d*\.))\d+)(?:\))(?![\da-z_])~i',
+            '~(?<![\da-z_])\(-((?:0\.|[1-9]\d*\.)\d+)\)(?![\da-z_])~i',
             function ($matches) {
                 $value = ((float) $matches[1]) * -1;
                 return $this->simplify($matches[0], new ExpressionFloat($value));
@@ -329,7 +329,7 @@ class Executor
 
         //integer negative
         $expression = preg_replace_callback(
-            '~(?<![\da-z_])(?:\(-)((?:0)|(?:[1-9]\d*))(?![\d])(?:\))(?![\da-z_])~i',
+            '~(?<![\da-z_])\(-(0|[1-9]\d*)(?!\d)\)(?![\da-z_])~i',
             function ($matches) {
                 $value = ((int) $matches[1]) * -1;
                 return $this->simplify($matches[0], new ExpressionInteger($value));
@@ -339,7 +339,7 @@ class Executor
 
         //integer positive
         $expression = preg_replace_callback(
-            '~(?<![\da-z_])((0)|([1-9]\d*))(?![\d])(?![\da-z_])~i',
+            '~(?<![\da-z_])((0)|([1-9]\d*))(?!\d)(?![\da-z_])~i',
             function ($matches) {
                 $value = (int) $matches[0];
                 return $this->simplify($matches[0], new ExpressionInteger($value));
@@ -369,7 +369,7 @@ class Executor
     private function prepareArrays(string $expression): string
     {
         $expression = preg_replace_callback(
-            '~\[(?:(`[a-f\d]{32}`),)*(`[a-f\d]{32}`),?\]~i',
+            '~\[(?:(`[a-f\d]{32}`),)*(`[a-f\d]{32}`),?]~i',
             function ($matches) {
                 $array = explode(
                     ',',
@@ -385,7 +385,7 @@ class Executor
         );
 
         return preg_replace_callback(
-            '~\[\]~i',
+            '~\[]~i',
             function ($matches) {
                 return $this->simplify($matches[0], new ExpressionArray([], []));
             },
@@ -447,6 +447,9 @@ class Executor
         $regexps = [
             'brackets' => ['~\((`[a-f\d]{32}`)', '(`[a-f\d]{32}`)\)~'],
             'simple' => ['~(`[a-f\d]{32}`)', '(`[a-f\d]{32}`)~'],
+            'simple_wrapped' => ['~\((`[a-f\d]{32}`)\)', '\((`[a-f\d]{32}`)\)~'],
+            'simple_wrapped_left' => ['~\((`[a-f\d]{32}`)\)', '(`[a-f\d]{32}`)~'],
+            'simple_wrapped_right' => ['~(`[a-f\d]{32}`)', '\((`[a-f\d]{32}`)\)~'],
         ];
 
         foreach ($regexps as $type => $regexpPriority) {
@@ -467,6 +470,10 @@ class Executor
                     $expression = str_replace($matches[0], $token, $expression);
                 }
             }
+        }
+
+        if (preg_match('~^\(`[a-f\d]{32}`\)$~', $expression)) {
+            return trim($expression, '()');
         }
 
         return $expression;
