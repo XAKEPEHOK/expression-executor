@@ -26,6 +26,9 @@ class ExecutorTest extends TestCase
     private $func_length;
 
     /** @var FunctionInterface */
+    private $func_sqr;
+
+    /** @var FunctionInterface */
     private $func_context;
 
     /** @var FunctionInterface[] */
@@ -109,6 +112,30 @@ class ExecutorTest extends TestCase
                 return mb_strlen($arguments[0]);
             }
         };
+        $this->func_sqr = new class implements FunctionInterface {
+
+            public function getName(): string
+            {
+                return 'SQR';
+            }
+
+            public function execute(array $arguments, array $context)
+            {
+                return $arguments[0] * $arguments[0];
+            }
+        };
+        $this->func_sqrt = new class implements FunctionInterface {
+
+            public function getName(): string
+            {
+                return 'SQRT';
+            }
+
+            public function execute(array $arguments, array $context)
+            {
+                return intval(sqrt($arguments[0]));
+            }
+        };
         $this->func_context = new class implements FunctionInterface {
 
             public function getName(): string
@@ -125,6 +152,8 @@ class ExecutorTest extends TestCase
             $this->func_min,
             $this->func_max,
             $this->func_length,
+            $this->func_sqr,
+            $this->func_sqrt,
             $this->func_context,
         ];
 
@@ -288,6 +317,7 @@ class ExecutorTest extends TestCase
         $this->vars = function ($name, array $context = []) {
             $vars = [
                 'TEN' => 10,
+                'NINE' => 9,
                 'FIVE' => 5,
                 'STRING' => 'Awesome!',
                 'CONTEXT.VALUE' => $context['VALUE'] ?? null
@@ -490,6 +520,8 @@ class ExecutorTest extends TestCase
             ['(2.2 + 3.3 * 2.2)', (2.2 + 3.3 * 2.2)],
             ['(2.2 + 3.3 * 2.2 + 56) + (2.2 + 3.3 * 2.2 + (2.2 + 3.3 * 2.2 + 56))', (2.2 + 3.3 * 2.2 + 56) + (2.2 + 3.3 * 2.2 + (2.2 + 3.3 * 2.2 + 56))],
             ['(2.2 + 3.3 * 2.2 + 56) + (2.2 + 3.3 * 2.2 + (2.2 + 3.3 * 2.2 + LENGTH("LENGTH(\"{{TEN}}\")")))', (2.2 + 3.3 * 2.2 + 56) + (2.2 + 3.3 * 2.2 + (2.2 + 3.3 * 2.2 + strlen("LENGTH(\"{{TEN}}\")")))],
+
+            ['SQR( {{TEN}} - SQRT( {{NINE}} ) )', 49],
 
 
             [

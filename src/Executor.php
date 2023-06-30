@@ -62,7 +62,11 @@ class Executor
                 throw new ExecutorException("Invalid function name «{$function->getName()}»: name should be match [a-z\d_]+", 11);
             }
         }
-        $this->functions = $functions;
+
+        $this->functions = [];
+        foreach ($functions as $function) {
+            $this->functions[$function->getName()] = $function;
+        }
 
         foreach ($operators as $operator) {
             if (!($operator instanceof OperatorInterface)) {
@@ -444,8 +448,9 @@ class Executor
 
     private function calcOperations(string $expression, array $context): string
     {
+        $notFunction = '(?<!' . implode('|', array_keys($this->functions)) . ')';
         $regexps = [
-            'brackets' => ['~\((`[a-f\d]{32}`)', '(`[a-f\d]{32}`)\)~'],
+            'brackets' => ["~{$notFunction}\((`[a-f\d]{32}`)", '(`[a-f\d]{32}`)\)~'],
             'simple' => ['~(`[a-f\d]{32}`)', '(`[a-f\d]{32}`)~'],
             'simple_wrapped' => ['~\((`[a-f\d]{32}`)\)', '\((`[a-f\d]{32}`)\)~'],
             'simple_wrapped_left' => ['~\((`[a-f\d]{32}`)\)', '(`[a-f\d]{32}`)~'],
