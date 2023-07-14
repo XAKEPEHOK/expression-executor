@@ -284,6 +284,15 @@ class Executor
      */
     private function prepareStrings(string $expression): string
     {
+        $empty = new ExpressionString('');
+
+        //Check empty strings with ignore escaping \
+        $expression = preg_replace_callback(
+            '~(?<!\\\)"{2}~',
+            fn($matches) => $this->simplify("", $empty),
+            $expression
+        );
+
         $matches = [];
         $regexp = '~(?<!\\\\)(?:\\\\{2})*"((?:(?<!\\\\)(?:\\\\{2})*\\\\"|[^"])+(?<!\\\\)(?:\\\\{2})*)"~';
         while (preg_match($regexp, $expression, $matches)) {
@@ -294,12 +303,6 @@ class Executor
                 $expression
             );
         }
-
-        $expression = str_replace(
-            '""',
-            $this->simplify('""', new ExpressionString('')),
-            $expression
-        );
 
         return $expression;
     }

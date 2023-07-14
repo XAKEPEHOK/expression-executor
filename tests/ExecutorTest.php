@@ -170,7 +170,7 @@ class ExecutorTest extends TestCase
              */
             public function priority(): int
             {
-                return 1;
+                return 20;
             }
 
             public function execute($leftOperand, $rightOperand, array $context)
@@ -191,7 +191,7 @@ class ExecutorTest extends TestCase
              */
             public function priority(): int
             {
-                return 1;
+                return 20;
             }
 
             public function execute($leftOperand, $rightOperand, array $context)
@@ -212,7 +212,7 @@ class ExecutorTest extends TestCase
              */
             public function priority(): int
             {
-                return 2;
+                return 30;
             }
 
             public function execute($leftOperand, $rightOperand, array $context)
@@ -233,7 +233,7 @@ class ExecutorTest extends TestCase
              */
             public function priority(): int
             {
-                return 2;
+                return 30;
             }
 
             public function execute($leftOperand, $rightOperand, array $context)
@@ -254,7 +254,7 @@ class ExecutorTest extends TestCase
              */
             public function priority(): int
             {
-                return 2;
+                return 30;
             }
 
             public function execute($leftOperand, $rightOperand, array $context)
@@ -275,7 +275,7 @@ class ExecutorTest extends TestCase
              */
             public function priority(): int
             {
-                return 2;
+                return 30;
             }
 
             public function execute($leftOperand, $rightOperand, array $context)
@@ -296,7 +296,7 @@ class ExecutorTest extends TestCase
              */
             public function priority(): int
             {
-                return 1;
+                return 10;
             }
 
             public function execute($leftOperand, $rightOperand, array $context)
@@ -304,6 +304,73 @@ class ExecutorTest extends TestCase
                 return (int)in_array($leftOperand, $rightOperand, true);
             }
         };
+
+        $this->operator_and = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return 'AND';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 1;
+            }
+
+            public function execute($leftOperand, $rightOperand, array $context)
+            {
+                return $leftOperand && $rightOperand;
+            }
+        };
+
+        $this->operator_or = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return 'OR';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 1;
+            }
+
+            public function execute($leftOperand, $rightOperand, array $context)
+            {
+                return $leftOperand || $rightOperand;
+            }
+        };
+
+        $this->operator_equals = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return '==';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 5;
+            }
+
+            public function execute($leftOperand, $rightOperand, array $context)
+            {
+                return $leftOperand === $rightOperand;
+            }
+        };
+
         $this->operators = [
             $this->operator_plus,
             $this->operator_minus,
@@ -312,6 +379,9 @@ class ExecutorTest extends TestCase
             $this->operator_divide_alt,
             $this->operator_context,
             $this->operator_in,
+            $this->operator_and,
+            $this->operator_or,
+            $this->operator_equals,
         ];
 
         $this->vars = function ($name, array $context = []) {
@@ -320,6 +390,11 @@ class ExecutorTest extends TestCase
                 'NINE' => 9,
                 'FIVE' => 5,
                 'STRING' => 'Awesome!',
+                'STRING.EMPTY_1' => '',
+                'STRING.EMPTY_2' => '',
+                'STRING.VALUE_1' => '1',
+                'STRING.VALUE_2' => '2',
+                'STRING.QUOTES' => '"HELLO"',
                 'CONTEXT.VALUE' => $context['VALUE'] ?? null
             ];
             return $vars[$name];
@@ -328,6 +403,8 @@ class ExecutorTest extends TestCase
         $this->constants = [
             'PI' => 3.14,
             'G' => 9.8,
+            'TRUE' => true,
+            'FALSE' => false,
         ];
 
         $this->executor = new Executor(
@@ -549,6 +626,21 @@ class ExecutorTest extends TestCase
             ['"is not" IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 1],
             ['30+30 IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 1],
             ['"60" IN [25 + 5 * 2, "is not", (25 + 5) * 2]', 0],
+
+            ['TRUE AND TRUE', true],
+            ['TRUE OR TRUE', true],
+            ['TRUE AND FALSE', false],
+            ['TRUE OR FALSE', true],
+            ['FALSE OR FALSE', false],
+
+            ['{{NINE}} == 9', true],
+            ['{{TEN}} == 10', true],
+            ['{{TEN}} == 11', false],
+
+            ['{{TEN}} == 10 AND {{NINE}} == 9', true],
+            ['{{STRING.EMPTY_1}} == "" AND {{STRING.EMPTY_2}} == ""', true],
+            ['{{STRING.VALUE_1}} == "1" AND {{STRING.VALUE_2}} == "2"', true],
+            ['{{STRING.VALUE_1}} == "1" AND {{STRING.EMPTY_2}} == "" AND {{STRING.QUOTES}} == "\"HELLO\""', true],
         ];
 
         return array_combine(array_column($examples, 0), $examples);
