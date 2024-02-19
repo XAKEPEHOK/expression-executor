@@ -107,13 +107,14 @@ class Executor
      */
     public function execute(string $expression, array $context = [])
     {
+        $expression = trim($expression);
         $this->simplifications = [];
         $this->guardToken($expression);
         $expression = $this->prepareStrings($expression);
         $expression = $this->prepareVariables($expression, $context);
         $expression = $this->prepareConstants($expression);
         $expression = $this->prepareNumbers($expression);
-        $expression = preg_replace('/\s+/u', '', $expression);
+        $expression = preg_replace('/\s+/u', ' ', $expression);
         $expression = $this->calculate($expression, $context);
 
         if (preg_match('~^`[a-f\d]{32}`$~', $expression)) {
@@ -316,9 +317,9 @@ class Executor
     {
         //float negative
         $expression = preg_replace_callback(
-            '~(?<![\da-z_])\(-((?:0\.|[1-9]\d*\.)\d+)\)(?![\da-z_])~i',
+            '~(?<![\da-z_])\(\s*-((?:0\.|[1-9]\d*\.)\d+)\s*\)(?![\da-z_])~i',
             function ($matches) {
-                $value = ((float) $matches[1]) * -1;
+                $value = floatval(trim($matches[1])) * -1;
                 return $this->simplify($matches[0], new ExpressionFloat($value));
             },
             $expression
@@ -336,9 +337,9 @@ class Executor
 
         //integer negative
         $expression = preg_replace_callback(
-            '~(?<![\da-z_])\(-(0|[1-9]\d*)(?!\d)\)(?![\da-z_])~i',
+            '~(?<![\da-z_])\(\s*-(0|[1-9]\d*)(?!\d)\s*\)(?![\da-z_])~i',
             function ($matches) {
-                $value = ((int) $matches[1]) * -1;
+                $value = intval($matches[1]) * -1;
                 return $this->simplify($matches[0], new ExpressionInteger($value));
             },
             $expression
@@ -376,7 +377,7 @@ class Executor
     private function prepareArrays(string $expression): string
     {
         $expression = preg_replace_callback(
-            '~\[(?:(`[a-f\d]{32}`),)*(`[a-f\d]{32}`),?]~i',
+            '~\[(?:\s*(`[a-f\d]{32}`)\s*,)*(\s*`[a-f\d]{32}`)\s*,?]~i',
             function ($matches) {
                 $array = explode(
                     ',',
@@ -406,8 +407,8 @@ class Executor
             $name = $function->getName();
 
             $exactlyFunctionName = '(?<![a-z\d_])' . preg_quote($name);
-            $arrayArguments = '\(((?:`[a-f\d]{32}`){1}(?:,`[a-f\d]{32}`)*)\)';
-            $namedArguments = '\(((?:[a-z\d_]+:`[a-f\d]{32}`)(?:,[a-z\d_]+:`[a-f\d]{32}`)*)\)';
+            $arrayArguments = '\(((?:\s*`[a-f\d]{32}`\s*){1}(?:,\s*`[a-f\d]{32}`\s*)*)\)';
+            $namedArguments = '\(((?:\s*[a-z\d_]+\s*:\s*`[a-f\d]{32}`\s*)(?:,\s*[a-z\d_]+\s*:\s*`[a-f\d]{32}`\s*)*)\)';
 
             $regexp = "~{$exactlyFunctionName}(?:(?:{$arrayArguments})|(?:(?:{$namedArguments})))~ui";
 
@@ -428,8 +429,8 @@ class Executor
                     }, explode(',', $matches[2]));
 
                     $arguments = array_combine(
-                        array_column($arguments, 'key'),
-                        array_column($arguments, 'value')
+                        array_map('trim', array_column($arguments, 'key')),
+                        array_map('trim', array_column($arguments, 'value'))
                     );
                 }
 
@@ -453,7 +454,7 @@ class Executor
     {
         $notFunction = '(?<!' . implode('|', array_keys($this->functions)) . ')';
         $regexps = [
-            'brackets' => ["~{$notFunction}\((`[a-f\d]{32}`)", '(`[a-f\d]{32}`)\)~'],
+            'brackets' => ["~{$notFunction}\(\s*(`[a-f\d]{32}`)", '(`[a-f\d]{32}`)\s*\)~'],
             'simple' => ['~(`[a-f\d]{32}`)', '(`[a-f\d]{32}`)~'],
             'simple_wrapped' => ['~\((`[a-f\d]{32}`)\)', '\((`[a-f\d]{32}`)\)~'],
             'simple_wrapped_left' => ['~\((`[a-f\d]{32}`)\)', '(`[a-f\d]{32}`)~'],
@@ -462,7 +463,7 @@ class Executor
 
         foreach ($regexps as $type => $regexpPriority) {
             foreach ($this->operators as $operator) {
-                $regexp = $regexpPriority[0] . preg_quote($operator->operator(), '~') . $regexpPriority[1];
+                $regexp = $regexpPriority[0] . '\s*' . preg_quote($operator->operator(), '~') . '\s*' . $regexpPriority[1];
                 $matches = [];
                 while (preg_match($regexp, $expression, $matches)) {
                     $leftOperand = $this->recall($matches[1]);

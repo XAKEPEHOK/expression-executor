@@ -55,6 +55,12 @@ class ExecutorTest extends TestCase
     /** @var OperatorInterface */
     private $operator_in;
 
+    private $operator_equals;
+
+    private $operator_great_than;
+
+    private $operator_less_than;
+
     /** @var OperatorInterface[] */
     private $operators;
 
@@ -371,6 +377,50 @@ class ExecutorTest extends TestCase
             }
         };
 
+        $this->operator_great_than = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return '>';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 5;
+            }
+
+            public function execute($leftOperand, $rightOperand, array $context)
+            {
+                return $leftOperand > $rightOperand;
+            }
+        };
+
+        $this->operator_less_than = new class implements OperatorInterface {
+
+            public function operator(): string
+            {
+                return '<';
+            }
+
+            /**
+             * Custom integer priority value. For example, for "+" it can be 1, for "*" it can be 2
+             * @return int
+             */
+            public function priority(): int
+            {
+                return 5;
+            }
+
+            public function execute($leftOperand, $rightOperand, array $context)
+            {
+                return $leftOperand < $rightOperand;
+            }
+        };
+
         $this->operators = [
             $this->operator_plus,
             $this->operator_minus,
@@ -382,6 +432,8 @@ class ExecutorTest extends TestCase
             $this->operator_and,
             $this->operator_or,
             $this->operator_equals,
+            $this->operator_great_than,
+            $this->operator_less_than,
         ];
 
         $this->vars = function ($name, array $context = []) {
@@ -528,7 +580,9 @@ class ExecutorTest extends TestCase
     {
         $examples = [
             ['"HELLO"', 'HELLO'],
+            ['" HELLO "', ' HELLO '],
             ['"\"HELLO\""', '"HELLO"'],
+            ['"\" HELLO \""', '" HELLO "'],
             ['"`e049f681893a971fb67a1be465808f82`"', '`e049f681893a971fb67a1be465808f82`'],
             ['"+"', '+'],
             ['"LENGTH({{STRING}})"', 'LENGTH({{STRING}})'],
@@ -538,25 +592,35 @@ class ExecutorTest extends TestCase
             ['""', ''],
 
             ['LENGTH("HELLO")', mb_strlen('HELLO')],
+            ['LENGTH( "HELLO" )', mb_strlen('HELLO')],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
             ['LENGTH(PI)', mb_strlen($this->constants['PI'])],
             ['LENGTH({{STRING}})', mb_strlen(($this->vars)('STRING'))],
+            ['LENGTH( {{STRING}} )', mb_strlen(($this->vars)('STRING'))],
             ['LENGTH("\"HELLO\"")', mb_strlen('"HELLO"')],
             ['LENGTH(string: "HELLO")', mb_strlen('HELLO')],
+            ['LENGTH( string : "HELLO" )', mb_strlen('HELLO')],
             ['LENGTH(string: {{STRING}})', mb_strlen(($this->vars)('STRING'))],
+            ['LENGTH( string : {{STRING}} )', mb_strlen(($this->vars)('STRING'))],
 
             ['MIN("1", "2")', min(["1", "2"])],
+            ['MIN( "1"  ,  "2" )', min(["1", "2"])],
             ['MIN(1, 2)', min([1, 2])],
+            ['MIN( 1 , 2 )', min([1, 2])],
             ['MIN(1.2, 2.3)', min([1.2, 2.3])],
-            ['MIN((-1), (-2))', min([-1, -2])],         //17
-            ['MIN((-1.2), (-2.3))', min([-1.2, -2.3])],
+            ['MIN( 1.2 , 2.3 )', min([1.2, 2.3])],
+            ['MIN((-1), (-2))', min([-1, -2])],
+            ['MIN( ( -1 ) , ( -2 ) )', min([-1, -2])],
+            ['MIN( (-1.2) , (-2.3) )', min([-1.2, -2.3])],
 
             ['MIN(value_1: "1", value_2: "2")', min(["1", "2"])],
             ['MIN(value_1: 1, value_2: 2)', min([1, 2])],
             ['MIN(value_1: 0.1, value_2: 1.2)', min([0.1, 1.2])],
             ['MIN(value_1: (-1), value_2: (-2))', min([-1, -2])],
+            ['MIN( value_1 : ( -1 ) , value_2 : ( -2 ) )', min([-1, -2])],
             ['MIN(value_1: (-0.1), value_2: (-1.2))', min([-0.1, -1.2])],
+            ['MIN( value_1 : ( -0.1 ) , value_2 : ( -1.2 ) )', min([-0.1, -1.2])],
 
             ['MIN(value_1: LENGTH({{STRING}}), value_2: {{TEN}})', min([
                 mb_strlen(($this->vars)('STRING')),
@@ -584,6 +648,7 @@ class ExecutorTest extends TestCase
 
             ['"2" + "3"', 5],
             ['2 + 3', 5],
+            ['  2   +   3  ', 5],
             ['2.2 + 3.3', 5.5],
 
             ['"2" + "3" * "2"', 2 + 3 * 2],
@@ -592,6 +657,7 @@ class ExecutorTest extends TestCase
 
             ['("2" + "3") * "2"', (2 + 3) * 2],
             ['(2 + 3) * 2', (2 + 3) * 2],
+            ['( 2 + 3 ) * 2', (2 + 3) * 2],
             ['(2 + 3)', (2 + 3)],
             ['(2.2 + 3.3) * 2.2', (2.2 + 3.3) * 2.2],
             ['(2.2 + 3.3 * 2.2)', (2.2 + 3.3 * 2.2)],
@@ -613,6 +679,7 @@ class ExecutorTest extends TestCase
             ]]],
 
             ['["HELLO", "MY", "WORLD"]', ['HELLO', 'MY', 'WORLD']],
+            ['[ "HELLO" , "MY" , "WORLD" ]', ['HELLO', 'MY', 'WORLD']],
             ['["HELLO", "MY", "WORLD",]', ['HELLO', 'MY', 'WORLD']],
             ['["Age", "is", 25]', ['Age', 'is', 25]],
             ['["Age", "is", 25 + 5]', ['Age', 'is', 30]],
@@ -641,6 +708,7 @@ class ExecutorTest extends TestCase
             ['{{STRING.EMPTY_1}} == "" AND {{STRING.EMPTY_2}} == ""', true],
             ['{{STRING.VALUE_1}} == "1" AND {{STRING.VALUE_2}} == "2"', true],
             ['{{STRING.VALUE_1}} == "1" AND {{STRING.EMPTY_2}} == "" AND {{STRING.QUOTES}} == "\"HELLO\""', true],
+            ['{{STRING.VALUE_1}} == "1" AND LENGTH({{STRING.VALUE_2}}) > 0', true]
         ];
 
         return array_combine(array_column($examples, 0), $examples);
