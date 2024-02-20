@@ -107,6 +107,7 @@ class Executor
      */
     public function execute(string $expression, array $context = [])
     {
+        $raw = $expression;
         $expression = trim($expression);
         $this->simplifications = [];
         $this->guardToken($expression);
@@ -121,7 +122,7 @@ class Executor
             return $this->recall($expression);
         }
 
-        throw new SyntaxException('Unexpected execution exception');
+        throw new SyntaxException('Unexpected execution exception in "' . $raw .'" on "' . $expression . '"');
     }
 
     /**
