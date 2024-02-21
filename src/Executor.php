@@ -457,9 +457,9 @@ class Executor
         $regexps = [
             'brackets' => ["~{$notFunction}\(\s*(`[a-f\d]{32}`)", '(`[a-f\d]{32}`)\s*\)~'],
             'simple' => ['~(`[a-f\d]{32}`)', '(`[a-f\d]{32}`)~'],
-            'simple_wrapped' => ['~\((`[a-f\d]{32}`)\)', '\((`[a-f\d]{32}`)\)~'],
-            'simple_wrapped_left' => ['~\((`[a-f\d]{32}`)\)', '(`[a-f\d]{32}`)~'],
-            'simple_wrapped_right' => ['~(`[a-f\d]{32}`)', '\((`[a-f\d]{32}`)\)~'],
+            'simple_wrapped' => ['~\(\s*(`[a-f\d]{32}`)\s*\)', '\(\s*(`[a-f\d]{32}`)\s*\)~'],
+            'simple_wrapped_left' => ['~\(\s*(`[a-f\d]{32}`)\s*\)', '(`[a-f\d]{32}`)~'],
+            'simple_wrapped_right' => ['~(`[a-f\d]{32}`)', '\(\s*(`[a-f\d]{32}`)\s*\)~'],
         ];
 
         foreach ($regexps as $type => $regexpPriority) {

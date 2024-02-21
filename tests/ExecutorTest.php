@@ -708,6 +708,8 @@ class ExecutorTest extends TestCase
             ['{{STRING.EMPTY_1}} == "" AND {{STRING.EMPTY_2}} == ""', true],
             ['{{STRING.VALUE_1}} == "1" AND {{STRING.VALUE_2}} == "2"', true],
             ['{{STRING.VALUE_1}} == "1" AND {{STRING.EMPTY_2}} == "" AND {{STRING.QUOTES}} == "\"HELLO\""', true],
+            ['{{STRING.VALUE_1}} == "1" AND ( {{STRING.EMPTY_2}} == "" OR {{STRING.QUOTES}} == "\"HELLO\"" )', true],
+            ['( {{STRING.VALUE_1}} == "1" ) AND ( {{STRING.EMPTY_2}} == "" OR {{STRING.QUOTES}} == "\"HELLO\"" )', true],
             ['{{STRING.VALUE_1}} == "1" AND LENGTH({{STRING.VALUE_2}}) > 0', true]
         ];
 
