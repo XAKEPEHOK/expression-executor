@@ -363,7 +363,7 @@ class Executor
     private function prepareConstants(string $expression): string
     {
         foreach ($this->constants as $name => $value) {
-            $regexp = '~(?<![a-z\d_])' . preg_quote($name) . '(?![a-z\d_])~i';
+            $regexp = '~(?<![a-z\d_])' . preg_quote($name) . '(?![a-z\d_(])(?!\s*\()~i';
             $expression = preg_replace_callback(
                 $regexp,
                 function ($matches) use ($name, $value) {

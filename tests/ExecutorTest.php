@@ -472,6 +472,7 @@ class ExecutorTest extends TestCase
             'G' => 9.8,
             'TRUE' => true,
             'FALSE' => false,
+            'YEAR' => 'YEAR',
         ];
 
         $this->executor = new Executor(
@@ -720,6 +721,10 @@ class ExecutorTest extends TestCase
             ['{{TEN}} == 10', true],
             ['{{TEN}} == 11', false],
 
+            ['YEAR', 'YEAR'],
+            ['(YEAR)', 'YEAR'],
+            ['(YEAR())', date('Y')],
+
             ['{{TEN}} == 10 AND {{NINE}} == 9', true],
             ['{{STRING.EMPTY_1}} == "" AND {{STRING.EMPTY_2}} == ""', true],
             ['{{STRING.VALUE_1}} == "1" AND {{STRING.VALUE_2}} == "2"', true],
@@ -756,6 +761,7 @@ class ExecutorTest extends TestCase
             ['"2" + "3'],
             ['"2" + 3"'],
             ['UNKNOWN("10")'],
+            ['YEAR ()'],
             ['("2" + "3"))'],
             ['(("2" + "3")'],
             ['MIN("2", value_2: "3")'],
