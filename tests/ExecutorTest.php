@@ -28,6 +28,8 @@ class ExecutorTest extends TestCase
     /** @var FunctionInterface */
     private $func_sqr;
 
+    private $func_year;
+
     /** @var FunctionInterface */
     private $func_context;
 
@@ -154,6 +156,18 @@ class ExecutorTest extends TestCase
                 return $context[$arguments[0]];
             }
         };
+        $this->func_year = new class implements FunctionInterface {
+
+            public function getName(): string
+            {
+                return 'YEAR';
+            }
+
+            public function execute(array $arguments, array $context)
+            {
+                return date('Y');
+            }
+        };
         $this->functions = [
             $this->func_min,
             $this->func_max,
@@ -161,6 +175,7 @@ class ExecutorTest extends TestCase
             $this->func_sqr,
             $this->func_sqrt,
             $this->func_context,
+            $this->func_year,
         ];
 
         $this->operator_plus = new class implements OperatorInterface {
@@ -591,6 +606,7 @@ class ExecutorTest extends TestCase
             ['{{STRING}}', ($this->vars)('STRING')],
             ['""', ''],
 
+            ['YEAR()', date('Y')],
             ['LENGTH("HELLO")', mb_strlen('HELLO')],
             ['LENGTH( "HELLO" )', mb_strlen('HELLO')],
             ['LENGTH("HELLO") + G * PI', mb_strlen('HELLO') + $this->constants['G'] * $this->constants['PI']],
@@ -742,7 +758,6 @@ class ExecutorTest extends TestCase
             ['UNKNOWN("10")'],
             ['("2" + "3"))'],
             ['(("2" + "3")'],
-            ['MIN()'],
             ['MIN("2", value_2: "3")'],
             ['"2" + "3"()'],
             ['"2" + "3" ()'],

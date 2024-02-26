@@ -410,8 +410,9 @@ class Executor
             $exactlyFunctionName = '(?<![a-z\d_])' . preg_quote($name);
             $arrayArguments = '\(((?:\s*`[a-f\d]{32}`\s*){1}(?:,\s*`[a-f\d]{32}`\s*)*)\)';
             $namedArguments = '\(((?:\s*[a-z\d_]+\s*:\s*`[a-f\d]{32}`\s*)(?:,\s*[a-z\d_]+\s*:\s*`[a-f\d]{32}`\s*)*)\)';
+            $emptyArguments = '\(\s*\)';
 
-            $regexp = "~{$exactlyFunctionName}(?:(?:{$arrayArguments})|(?:(?:{$namedArguments})))~ui";
+            $regexp = "~{$exactlyFunctionName}(?:(?:{$arrayArguments})|(?:{$namedArguments})|(?:{$emptyArguments}))~ui";
 
             $matches = [];
             while (preg_match($regexp, $expression, $matches)) {
@@ -420,7 +421,7 @@ class Executor
                     $arguments = array_map(function ($token) {
                         return $token;
                     }, explode(',', $matches[1]));
-                } else {
+                } elseif (isset($matches[2])) {
                     $arguments = array_map(function ($token) {
                         [$key, $value] = explode(':', $token);
                         return [
@@ -433,6 +434,8 @@ class Executor
                         array_map('trim', array_column($arguments, 'key')),
                         array_map('trim', array_column($arguments, 'value'))
                     );
+                } else {
+                    $arguments = [];
                 }
 
                 $expr = $matches[0];
