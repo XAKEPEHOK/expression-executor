@@ -419,7 +419,7 @@ class Executor
 
                 if (!empty($matches[1])) {
                     $arguments = array_map(function ($token) {
-                        return $token;
+                        return trim($token);
                     }, explode(',', $matches[1]));
                 } elseif (isset($matches[2])) {
                     $arguments = array_map(function ($token) {
