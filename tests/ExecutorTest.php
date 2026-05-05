@@ -28,6 +28,9 @@ class ExecutorTest extends TestCase
     /** @var FunctionInterface */
     private $func_sqr;
 
+    /** @var FunctionInterface */
+    private $func_sqrt;
+
     private $func_year;
 
     /** @var FunctionInterface */
@@ -56,6 +59,12 @@ class ExecutorTest extends TestCase
 
     /** @var OperatorInterface */
     private $operator_in;
+
+    /** @var OperatorInterface */
+    private $operator_and;
+
+    /** @var OperatorInterface */
+    private $operator_or;
 
     private $operator_equals;
 
@@ -784,5 +793,21 @@ class ExecutorTest extends TestCase
         $this->executor->execute($expression);
     }
 
+    /**
+     * Regression: с пустым списком функций оператор в скобках должен попадать
+     * в ветку 'brackets' и оборачиваться в ExpressionBrackets. Раньше
+     * calcOperations строил пустой lookbehind `(?<!)`, который в PCRE2 никогда
+     * не совпадает, и обёртка BRACKETS терялась в дереве explain().
+     * @throws SyntaxException
+     */
+    public function testExplainWithoutFunctions(): void
+    {
+        $executor = new Executor([], [$this->operator_plus]);
+        $this->assertSame(3, $executor->execute('(1 + 2)'));
+
+        $tree = $executor->explain('(1 + 2)');
+        $this->assertSame('BRACKETS', $tree['type']);
+        $this->assertSame('OPERATION', $tree['calculated']['type']);
+    }
 
 }

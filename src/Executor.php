@@ -23,6 +23,8 @@ use XAKEPEHOK\ExpressionExecutor\Exceptions\SyntaxException;
 class Executor
 {
 
+    private const HASH_TOKEN = '[a-f\d]{32}';
+
     /** @var FunctionInterface[]|callable[] */
     private $functions;
 
@@ -42,14 +44,14 @@ class Executor
      * Executor constructor.
      * @param FunctionInterface[] $functions
      * @param OperatorInterface[] $operators
-     * @param callable $variables
+     * @param callable|null $variables
      * @param array $constants
      * @throws ExecutorException
      */
     public function __construct(
         array $functions,
         array $operators,
-        callable $variables = null,
+        ?callable $variables = null,
         array $constants = []
     )
     {
@@ -81,12 +83,10 @@ class Executor
         $this->operators = $operators;
 
 
-        usort($this->operators, function (OperatorInterface $operator_1, OperatorInterface $operator_2) {
-            if ($operator_1->priority() == $operator_2->priority()) {
-                return 0;
-            }
-            return ($operator_1->priority() < $operator_2->priority()) ? 1 : -1;
-        });
+        usort(
+            $this->operators,
+            fn(OperatorInterface $a, OperatorInterface $b) => $b->priority() <=> $a->priority()
+        );
 
         $this->variables = $variables;
 
@@ -118,7 +118,7 @@ class Executor
         $expression = preg_replace('/\s+/u', ' ', $expression);
         $expression = $this->calculate($expression, $context);
 
-        if (preg_match('~^`[a-f\d]{32}`$~', $expression)) {
+        if (preg_match('~^`' . self::HASH_TOKEN . '`$~', $expression)) {
             return $this->recall($expression);
         }
 
@@ -229,11 +229,6 @@ class Executor
         return $result;
     }
 
-    private function getComponentByHash(string $hash): ExpressionComponentInterface
-    {
-        return $this->simplifications[$hash]['component'];
-    }
-
     /**
      * @param string $expression
      * @param array $context
@@ -241,7 +236,7 @@ class Executor
      */
     private function calculate(string $expression, array $context): string
     {
-        if (!preg_match('~^`[a-f\d]{32}`$~', $expression)) {
+        if (!preg_match('~^`' . self::HASH_TOKEN . '`$~', $expression)) {
             $changed = true;
             while ($changed) {
                 $before = $expression;
@@ -378,7 +373,7 @@ class Executor
     private function prepareArrays(string $expression): string
     {
         $expression = preg_replace_callback(
-            '~\[(?:\s*(`[a-f\d]{32}`)\s*,)*(\s*`[a-f\d]{32}`)\s*,?]~i',
+            '~\[(?:\s*(`' . self::HASH_TOKEN . '`)\s*,)*(\s*`' . self::HASH_TOKEN . '`)\s*,?]~i',
             function ($matches) {
                 $array = explode(
                     ',',
@@ -408,8 +403,8 @@ class Executor
             $name = $function->getName();
 
             $exactlyFunctionName = '(?<![a-z\d_])' . preg_quote($name);
-            $arrayArguments = '\(((?:\s*`[a-f\d]{32}`\s*){1}(?:,\s*`[a-f\d]{32}`\s*)*)\)';
-            $namedArguments = '\(((?:\s*[a-z\d_]+\s*:\s*`[a-f\d]{32}`\s*)(?:,\s*[a-z\d_]+\s*:\s*`[a-f\d]{32}`\s*)*)\)';
+            $arrayArguments = '\(((?:\s*`' . self::HASH_TOKEN . '`\s*){1}(?:,\s*`' . self::HASH_TOKEN . '`\s*)*)\)';
+            $namedArguments = '\(((?:\s*[a-z\d_]+\s*:\s*`' . self::HASH_TOKEN . '`\s*)(?:,\s*[a-z\d_]+\s*:\s*`' . self::HASH_TOKEN . '`\s*)*)\)';
             $emptyArguments = '\(\s*\)';
 
             $regexp = "~{$exactlyFunctionName}(?:(?:{$arrayArguments})|(?:{$namedArguments})|(?:{$emptyArguments}))~ui";
@@ -456,13 +451,15 @@ class Executor
 
     private function calcOperations(string $expression, array $context): string
     {
-        $notFunction = '(?<!' . implode('|', array_keys($this->functions)) . ')';
+        $notFunction = empty($this->functions)
+            ? ''
+            : '(?<!' . implode('|', array_keys($this->functions)) . ')';
         $regexps = [
-            'brackets' => ["~{$notFunction}\(\s*(`[a-f\d]{32}`)", '(`[a-f\d]{32}`)\s*\)~'],
-            'simple' => ['~(`[a-f\d]{32}`)', '(`[a-f\d]{32}`)~'],
-            'simple_wrapped' => ['~\(\s*(`[a-f\d]{32}`)\s*\)', '\(\s*(`[a-f\d]{32}`)\s*\)~'],
-            'simple_wrapped_left' => ['~\(\s*(`[a-f\d]{32}`)\s*\)', '(`[a-f\d]{32}`)~'],
-            'simple_wrapped_right' => ['~(`[a-f\d]{32}`)', '\(\s*(`[a-f\d]{32}`)\s*\)~'],
+            'brackets' => ["~{$notFunction}\(\s*(`" . self::HASH_TOKEN . '`)', '(`' . self::HASH_TOKEN . '`)\s*\)~'],
+            'simple' => ['~(`' . self::HASH_TOKEN . '`)', '(`' . self::HASH_TOKEN . '`)~'],
+            'simple_wrapped' => ['~\(\s*(`' . self::HASH_TOKEN . '`)\s*\)', '\(\s*(`' . self::HASH_TOKEN . '`)\s*\)~'],
+            'simple_wrapped_left' => ['~\(\s*(`' . self::HASH_TOKEN . '`)\s*\)', '(`' . self::HASH_TOKEN . '`)~'],
+            'simple_wrapped_right' => ['~(`' . self::HASH_TOKEN . '`)', '\(\s*(`' . self::HASH_TOKEN . '`)\s*\)~'],
         ];
 
         foreach ($regexps as $type => $regexpPriority) {
@@ -485,7 +482,7 @@ class Executor
             }
         }
 
-        if (preg_match('~^\(`[a-f\d]{32}`\)$~', $expression)) {
+        if (preg_match('~^\(`' . self::HASH_TOKEN . '`\)$~', $expression)) {
             return trim($expression, '()');
         }
 
@@ -512,7 +509,7 @@ class Executor
         }
 
         $tokens = [];
-        if (preg_match('~`[a-f\d]{32}`~', $expression, $tokens)) {
+        if (preg_match('~`' . self::HASH_TOKEN . '`~', $expression, $tokens)) {
             throw new SyntaxException('Invalid token in expression: ' . $tokens[0]);
         }
 
